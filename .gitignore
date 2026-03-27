@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temp files
+1774638014628-player-script.js
+1774638014719-player-script.js
+
+# local logo source
+logo_aitekin/
+aitekin_LOGO.png
+
+# claude local settings
+.claude/settings.local.json
+.claude/launch.json

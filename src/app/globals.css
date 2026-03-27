@@ -1,26 +1,172 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@plugin "daisyui" {
+  themes: aitekin-dark, aitekin-light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-neon-cyan: #00FFE5;
+  --color-neon-green: #39FF14;
+  --color-neon-purple: #BF40FF;
+  --color-neon-pink: #FF0080;
+  --color-neon-blue: #00D4FF;
+  --color-neon-yellow: #FFE500;
+  --color-text-primary: var(--theme-text-primary);
+  --color-text-secondary: var(--theme-text-secondary);
+  --color-base-100: var(--theme-base-100);
+  --color-base-200: var(--theme-base-200);
+  --color-base-300: var(--theme-base-300);
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ===== KOYU TEMA ===== */
+[data-theme="aitekin-dark"] {
+  --theme-base-100: #000000;
+  --theme-base-200: #0A0A12;
+  --theme-base-300: #14141F;
+  --theme-text-primary: #E4E4E7;
+  --theme-text-secondary: #71717A;
+
+  /* DaisyUI overrides */
+  --b1: 0 0% 0%;
+  --b2: 240 30% 4%;
+  --b3: 240 20% 10%;
+  --bc: 240 5% 90%;
+  --p: 174 100% 45%;
+  --pc: 0 0% 0%;
+  --s: 110 100% 54%;
+  --sc: 0 0% 0%;
+  --a: 280 100% 63%;
+  --ac: 0 0% 0%;
+  --n: 240 15% 12%;
+  --nc: 240 5% 90%;
+}
+
+/* ===== AÇIK TEMA ===== */
+[data-theme="aitekin-light"] {
+  --theme-base-100: #F8F9FC;
+  --theme-base-200: #EEF0F5;
+  --theme-base-300: #DFE2EA;
+  --theme-text-primary: #1A1A2E;
+  --theme-text-secondary: #52525B;
+
+  /* Neon renkleri açık temada biraz koyu */
+  --color-neon-cyan: #00BFA6;
+  --color-neon-green: #22C55E;
+  --color-neon-purple: #9333EA;
+  --color-neon-pink: #DB2777;
+  --color-neon-blue: #0EA5E9;
+  --color-neon-yellow: #CA8A04;
+
+  /* DaisyUI overrides */
+  --b1: 228 33% 97%;
+  --b2: 228 22% 95%;
+  --b3: 228 16% 90%;
+  --bc: 240 17% 14%;
+  --p: 170 100% 37%;
+  --pc: 0 0% 100%;
+  --s: 142 71% 45%;
+  --sc: 0 0% 100%;
+  --a: 271 81% 56%;
+  --ac: 0 0% 100%;
+  --n: 228 16% 90%;
+  --nc: 240 17% 14%;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-base-300) var(--theme-base-100);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--theme-base-100);
+  color: var(--theme-text-primary);
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(0, 255, 229, 0.3);
+  color: #00FFE5;
+}
+
+[data-theme="aitekin-light"] ::selection {
+  background: rgba(0, 191, 166, 0.2);
+  color: #00BFA6;
+}
+
+/* Neon glow utilities */
+@utility glow-cyan {
+  box-shadow: 0 0 5px rgba(0, 255, 229, 0.4), 0 0 20px rgba(0, 255, 229, 0.1);
+}
+
+@utility glow-green {
+  box-shadow: 0 0 5px rgba(57, 255, 20, 0.4), 0 0 20px rgba(57, 255, 20, 0.1);
+}
+
+@utility glow-purple {
+  box-shadow: 0 0 5px rgba(191, 64, 255, 0.4), 0 0 20px rgba(191, 64, 255, 0.1);
+}
+
+@utility glow-pink {
+  box-shadow: 0 0 5px rgba(255, 0, 128, 0.4), 0 0 20px rgba(255, 0, 128, 0.1);
+}
+
+@utility text-glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 255, 229, 0.5), 0 0 40px rgba(0, 255, 229, 0.2);
+}
+
+@utility text-glow-green {
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.5), 0 0 40px rgba(57, 255, 20, 0.2);
+}
+
+/* Açık temada glow efektlerini yumuşat */
+[data-theme="aitekin-light"] {
+  .glow-cyan { box-shadow: 0 0 3px rgba(0, 191, 166, 0.3), 0 0 10px rgba(0, 191, 166, 0.08); }
+  .glow-green { box-shadow: 0 0 3px rgba(34, 197, 94, 0.3), 0 0 10px rgba(34, 197, 94, 0.08); }
+  .glow-purple { box-shadow: 0 0 3px rgba(147, 51, 234, 0.3), 0 0 10px rgba(147, 51, 234, 0.08); }
+  .glow-pink { box-shadow: 0 0 3px rgba(219, 39, 119, 0.3), 0 0 10px rgba(219, 39, 119, 0.08); }
+  .text-glow-cyan { text-shadow: none; }
+  .text-glow-green { text-shadow: none; }
+}
+
+/* Neon border animation */
+@keyframes neon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes glow-rotate {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  0%, 100% { border-color: #00FFE5; }
+  50% { border-color: transparent; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes matrix-fall {
+  0% { transform: translateY(-100%); opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@utility animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+@utility animate-glow-rotate {
+  animation: glow-rotate 3s linear infinite;
+}
+
+@utility animate-float {
+  animation: float 3s ease-in-out infinite;
 }
