@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, ShieldX } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import NeonButton from "@/components/ui/NeonButton";
 import TerminalCard from "@/components/ui/TerminalCard";
 import { createClient } from "@/lib/supabase/client";
+
+// DAVET MODU - true = sadece davetliler kayit olabilir
+const INVITE_ONLY = true;
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -15,7 +19,34 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [inviteValid, setInviteValid] = useState<boolean | null>(null);
+  const [inviteChecking, setInviteChecking] = useState(true);
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite");
   const supabase = createClient();
+
+  useEffect(() => {
+    if (!INVITE_ONLY) {
+      setInviteValid(true);
+      setInviteChecking(false);
+      return;
+    }
+
+    if (!inviteToken) {
+      setInviteValid(false);
+      setInviteChecking(false);
+      return;
+    }
+
+    fetch(`/api/invite/verify?token=${inviteToken}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setInviteValid(data.valid);
+        if (data.email) setEmail(data.email);
+      })
+      .catch(() => setInviteValid(false))
+      .finally(() => setInviteChecking(false));
+  }, [inviteToken]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +54,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalı");
+      setError("Sifre en az 6 karakter olmali");
       setLoading(false);
       return;
     }
@@ -32,19 +63,26 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: {
-          username,
-        },
+        data: { username },
       },
     });
 
     if (error) {
-      setError(error.message === "User already registered"
-        ? "Bu e-posta zaten kayıtlı"
-        : error.message
+      setError(
+        error.message === "User already registered"
+          ? "Bu e-posta zaten kayitli"
+          : error.message
       );
       setLoading(false);
     } else {
+      // Waitlist'te status'u guncelle
+      if (inviteToken) {
+        fetch("/api/invite/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: inviteToken }),
+        }).catch(() => {});
+      }
       setSuccess(true);
       setLoading(false);
     }
@@ -59,6 +97,48 @@ export default function RegisterPage() {
     });
   }
 
+  // Yukleniyor
+  if (inviteChecking) {
+    return (
+      <div className="min-h-screen bg-base-100 flex items-center justify-center">
+        <Loader2 className="text-neon-cyan animate-spin" size={32} />
+      </div>
+    );
+  }
+
+  // Davet gecersiz
+  if (!inviteValid && INVITE_ONLY) {
+    return (
+      <div className="min-h-screen bg-base-100 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <TerminalCard title="auth/denied">
+            <div className="text-center py-8">
+              <div className="inline-flex p-4 rounded-full bg-red-500/10 mb-4">
+                <ShieldX className="text-red-400" size={32} />
+              </div>
+              <h2 className="text-lg font-bold text-text-primary mb-2">Sadece Davetliler</h2>
+              <p className="text-text-secondary text-sm mb-6">
+                Kayit olmak icin davet linki gerekli. Bekleme listesine katilarak davet alabilirsin.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Link href="/waitlist">
+                  <NeonButton color="cyan" className="w-full">
+                    Bekleme Listesine Katil
+                  </NeonButton>
+                </Link>
+                <Link href="/">
+                  <NeonButton color="green" variant="outline" className="w-full">
+                    Ana Sayfaya Don
+                  </NeonButton>
+                </Link>
+              </div>
+            </div>
+          </TerminalCard>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div className="min-h-screen bg-base-100 flex items-center justify-center px-4">
@@ -66,13 +146,13 @@ export default function RegisterPage() {
           <TerminalCard title="auth/verify">
             <div className="text-center py-6">
               <div className="text-4xl mb-4">{"✉️"}</div>
-              <h2 className="text-lg font-bold text-neon-green mb-2">{"Kayıt Başarılı!"}</h2>
+              <h2 className="text-lg font-bold text-neon-green mb-2">{"Kayit Basarili!"}</h2>
               <p className="text-text-secondary text-sm mb-4">
-                {"E-posta adresine bir doğrulama bağlantısı gönderdik. Hesabını aktifleştirmek için e-postanı kontrol et."}
+                {"E-posta adresine bir dogrulama baglantisi gonderdik. Hesabini aktiflestirmek icin e-postani kontrol et."}
               </p>
               <Link href="/login">
                 <NeonButton color="cyan" size="sm">
-                  {"Giriş Sayfasına Dön"}
+                  {"Giris Sayfasina Don"}
                 </NeonButton>
               </Link>
             </div>
@@ -94,8 +174,8 @@ export default function RegisterPage() {
               <span className="text-neon-green">.com</span>
             </span>
           </Link>
-          <h1 className="text-2xl font-bold text-text-primary">{"Maceraya Başla"}</h1>
-          <p className="text-text-secondary text-sm mt-1">{"Ücretsiz hesap oluştur"}</p>
+          <h1 className="text-2xl font-bold text-text-primary">{"Maceraya Basla"}</h1>
+          <p className="text-text-secondary text-sm mt-1">{"Ucretsiz hesap olustur"}</p>
         </div>
 
         <TerminalCard title="auth/register">
@@ -106,7 +186,7 @@ export default function RegisterPage() {
               </div>
             )}
             <div>
-              <label className="text-text-secondary text-xs block mb-1">{"Kullanıcı Adı"}</label>
+              <label className="text-text-secondary text-xs block mb-1">{"Kullanici Adi"}</label>
               <input
                 type="text"
                 placeholder="cyber_ninja"
@@ -127,14 +207,15 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-base-100 border border-base-300 rounded-lg px-4 py-3 text-sm
+                readOnly={!!inviteToken}
+                className={`w-full bg-base-100 border border-base-300 rounded-lg px-4 py-3 text-sm
                   text-text-primary placeholder:text-text-secondary/50 font-mono
                   focus:outline-none focus:border-neon-cyan focus:shadow-[0_0_10px_rgba(0,255,229,0.2)]
-                  transition-all"
+                  transition-all ${inviteToken ? "opacity-70" : ""}`}
               />
             </div>
             <div>
-              <label className="text-text-secondary text-xs block mb-1">{"Şifre"}</label>
+              <label className="text-text-secondary text-xs block mb-1">{"Sifre"}</label>
               <input
                 type="password"
                 placeholder="********"
@@ -152,10 +233,10 @@ export default function RegisterPage() {
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 size={16} className="animate-spin" />
-                  {"Kayıt yapılıyor..."}
+                  {"Kayit yapiliyor..."}
                 </span>
               ) : (
-                "Kayıt Ol"
+                "Kayit Ol"
               )}
             </NeonButton>
           </form>
@@ -172,17 +253,6 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <button
-                onClick={() => handleOAuth("github")}
-                className="w-full flex items-center justify-center gap-2 bg-base-100 border border-base-300
-                  rounded-lg px-4 py-3 text-sm text-text-primary hover:border-neon-purple/50
-                  transition-all cursor-pointer"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                </svg>
-                {"GitHub ile Kayıt Ol"}
-              </button>
-              <button
                 onClick={() => handleOAuth("google")}
                 className="w-full flex items-center justify-center gap-2 bg-base-100 border border-base-300
                   rounded-lg px-4 py-3 text-sm text-text-primary hover:border-neon-cyan/50
@@ -194,7 +264,7 @@ export default function RegisterPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                {"Google ile Kayıt Ol"}
+                {"Google ile Kayit Ol"}
               </button>
               <button
                 onClick={() => handleOAuth("facebook")}
@@ -205,15 +275,26 @@ export default function RegisterPage() {
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#1877F2">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
-                {"Facebook ile Kayıt Ol"}
+                {"Facebook ile Kayit Ol"}
+              </button>
+              <button
+                onClick={() => handleOAuth("github")}
+                className="w-full flex items-center justify-center gap-2 bg-base-100 border border-base-300
+                  rounded-lg px-4 py-3 text-sm text-text-primary hover:border-neon-purple/50
+                  transition-all cursor-pointer"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                </svg>
+                {"GitHub ile Kayit Ol"}
               </button>
             </div>
           </div>
 
           <p className="text-center text-text-secondary text-xs mt-6">
-            {"Zaten hesabın var mı? "}
+            {"Zaten hesabin var mi? "}
             <Link href="/login" className="text-neon-cyan hover:underline">
-              {"Giriş Yap"}
+              {"Giris Yap"}
             </Link>
           </p>
         </TerminalCard>
