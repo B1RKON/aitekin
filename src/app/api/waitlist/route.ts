@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
-const NOTIFY_EMAIL = "aitekin.website@gmail.com";
+const NOTIFY_EMAIL = "aytekinbirkon@gmail.com";
 
 async function sendNotification(email: string) {
   const apiKey = process.env.RESEND_API_KEY;
