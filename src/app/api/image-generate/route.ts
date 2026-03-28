@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
 import { checkDailyLimit } from "@/lib/rate-limiter";
 
-// Gunluk limit: 400 gorsel (Gemini free tier 500, guvenlik marji birakiyoruz)
-const DAILY_IMAGE_LIMIT = 400;
+// Gunluk limit: 500 gorsel (Cloudflare free tier cok yuksek ama guvenlik marji)
+const DAILY_IMAGE_LIMIT = 500;
+
+const models: Record<string, string> = {
+  sdxl: "@cf/stabilityai/stable-diffusion-xl-base-1.0",
+  flux: "@cf/black-forest-labs/flux-1-schnell",
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,49 +19,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { prompt } = await req.json();
+    const { prompt, model: modelKey } = await req.json();
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const accountId = process.env.CF_ACCOUNT_ID;
+    const apiToken = process.env.CF_API_TOKEN;
+
+    if (!accountId || !apiToken) {
       return NextResponse.json(
-        { error: "Gemini API anahtari yapilandirilmamis." },
+        { error: "Cloudflare API yapilandirilmamis." },
         { status: 503 }
       );
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const cfModel = models[modelKey] || models.sdxl;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
-      contents: `Generate an image of: ${prompt}. Only respond with the image, no text.`,
-      config: {
-        responseModalities: ["image", "text"],
-      },
-    });
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${cfModel}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          num_steps: 20,
+        }),
+      }
+    );
 
-    // Extract image from response parts
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (!parts) {
+    if (!response.ok) {
+      const errorText = await response.text();
       return NextResponse.json(
-        { error: "Gorsel uretilemedi." },
-        { status: 500 }
+        { error: `Gorsel uretilemedi: ${errorText}` },
+        { status: response.status }
       );
     }
 
-    for (const part of parts) {
-      if (part.inlineData?.data) {
-        const mimeType = part.inlineData.mimeType || "image/png";
-        const base64 = part.inlineData.data;
-        return NextResponse.json({
-          imageUrl: `data:${mimeType};base64,${base64}`,
-        });
-      }
-    }
+    // Cloudflare raw image bytes doner
+    const imageBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(imageBuffer).toString("base64");
 
-    return NextResponse.json(
-      { error: "Model gorsel olusturamadi. Lutfen farkli bir prompt deneyin." },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      imageUrl: `data:image/png;base64,${base64}`,
+      remaining,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
     return NextResponse.json(

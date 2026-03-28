@@ -6,7 +6,13 @@ import NeonButton from "@/components/ui/NeonButton";
 import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
 
+const models = [
+  { id: "sdxl", name: "SDXL", desc: "Yuksek kalite", color: "cyan" as const },
+  { id: "flux", name: "FLUX Schnell", desc: "Ultra hizli", color: "purple" as const },
+];
+
 export default function AiImageGeneratorPage() {
+  const [selectedModel, setSelectedModel] = useState(models[0]);
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState("");
@@ -24,7 +30,7 @@ export default function AiImageGeneratorPage() {
       const res = await fetch("/api/image-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, model: selectedModel.id }),
       });
       const data = await res.json();
 
@@ -51,7 +57,7 @@ export default function AiImageGeneratorPage() {
           <span className="text-neon-purple">&gt;</span> {"AI Gorsel Uretimi"}
         </h1>
         <p className="text-text-secondary text-sm mt-1">
-          {"Metin yazarak gorseller uretin. Gemini AI ile yuksek kaliteli gorseller."}
+          {"Metin yazarak gorseller uretin. SDXL ve FLUX modelleri ile sinir tanimayan yaraticilik."}
         </p>
       </div>
 
@@ -61,7 +67,8 @@ export default function AiImageGeneratorPage() {
           <div className="space-y-2 text-sm">
             <p className="text-neon-purple font-bold">{"Nasil Kullanilir?"}</p>
             <ol className="text-text-secondary space-y-1 list-decimal list-inside">
-              <li>{"Detayli prompt yazin (Ingilizce daha iyi sonuc verir)"}</li>
+              <li>{"Model secin"}</li>
+              <li>{"Ingilizce detayli prompt yazin"}</li>
               <li>{"\"Gorsel Uret\" butonuna tiklayin"}</li>
               <li>{"Sonucu indirin"}</li>
             </ol>
@@ -69,7 +76,18 @@ export default function AiImageGeneratorPage() {
         </div>
       </GlowCard>
 
-      <TerminalCard title="tools/image-gen/gemini">
+      <div className="flex gap-2">
+        {models.map((m) => (
+          <button key={m.id} onClick={() => { setSelectedModel(m); setImageUrl(null); setError(null); }}
+            className={`flex-1 px-3 py-2 rounded-lg text-xs border transition-all cursor-pointer text-center
+              ${selectedModel.id === m.id ? "border-neon-purple bg-neon-purple/10 text-neon-purple" : "border-base-300 text-text-secondary hover:text-text-primary"}`}>
+            <div className="font-bold">{m.name}</div>
+            <div className="text-[10px] opacity-60">{m.desc}</div>
+          </button>
+        ))}
+      </div>
+
+      <TerminalCard title={`tools/image-gen/${selectedModel.id}`}>
         <div className="space-y-4">
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
             placeholder={"A futuristic city at night with neon lights, cyberpunk, highly detailed, 4K"}
@@ -121,7 +139,7 @@ export default function AiImageGeneratorPage() {
       </TerminalCard>
 
       <div className="p-4 bg-base-200/50 border border-base-300 rounded-lg">
-        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Gorseller Google Gemini AI ile uretilir. Gunluk 500 gorsel ucretsiz."}</p>
+        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Gorseller Cloudflare Workers AI uzerinden uretilir. Ucretsiz ve her zaman aktif."}</p>
       </div>
     </div>
   );

@@ -61,7 +61,16 @@
       "WebFetch(domain:www.pixazo.ai)",
       "WebFetch(domain:developer.puter.com)",
       "Bash(npm list:*)",
-      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyASxP_RC1VXtWTxrGscMFHAoSER3E4Qcmc\")"
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyASxP_RC1VXtWTxrGscMFHAoSER3E4Qcmc\")",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:app.prodia.com)",
+      "WebFetch(domain:docs.prodia.com)",
+      "WebFetch(domain:blog.laozhang.ai)",
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/user/tokens/verify\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/accounts\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/memberships\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/user\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/accounts/6149f6b114cf80b25a878c720f83f12c/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\" -H \"Content-Type: application/json\" -d '{\"\"prompt\"\":\"\"A cute cat\"\"}' --output /tmp/test_image.png -w \"%{http_code}\")"
     ]
   }
 }
