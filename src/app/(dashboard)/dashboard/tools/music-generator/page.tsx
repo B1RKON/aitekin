@@ -6,13 +6,7 @@ import NeonButton from "@/components/ui/NeonButton";
 import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
 
-const models = [
-  { id: "musicgen", name: "MusicGen (Meta)", desc: "Melodiler ve jingle'lar", spaceIds: ["facebook/MusicGen", "Surn/UnlimitedMusicGen"], color: "purple" as const },
-  { id: "stable", name: "Stable Audio", desc: "Ses efektleri ve ambient", spaceIds: ["stabilityai/stable-audio-open-1-0"], color: "cyan" as const },
-];
-
 export default function MusicGeneratorPage() {
-  const [selectedModel, setSelectedModel] = useState(models[0]);
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState("");
@@ -24,30 +18,27 @@ export default function MusicGeneratorPage() {
     setGenerating(true);
     setError(null);
     setAudioUrl(null);
+    setProgress("Muzik uretiliyor...");
 
     try {
-      const { connectGradio } = await import("@/lib/gradio-client");
-      const { client } = await connectGradio({
-        spaceIds: selectedModel.spaceIds,
-        onStatus: setProgress,
+      const response = await fetch("https://gen.pollinations.ai/v1/audio/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "elevenmusic",
+          input: prompt,
+          voice: "alloy",
+          response_format: "mp3",
+        }),
       });
-      setProgress("Muzik uretiliyor... 30sn-1dk surebilir.");
 
-      const result = await client.predict("/predict", {
-        text: prompt,
-      });
-
-      if (result?.data) {
-        const data = result.data as unknown[];
-        for (const item of data) {
-          if (item && typeof item === "object" && "url" in (item as Record<string, unknown>)) {
-            setAudioUrl((item as Record<string, string>).url);
-            setProgress("");
-            return;
-          }
-        }
+      if (!response.ok) {
+        throw new Error("Muzik uretilemedi. Lutfen tekrar deneyin.");
       }
-      setError("Muzik olusturuldu ancak dosya alinamadi.");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
       setError(msg);
@@ -61,38 +52,26 @@ export default function MusicGeneratorPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-neon-purple">&gt;</span> {"Müzik Üretici"}
+          <span className="text-neon-purple">&gt;</span> {"Muzik Uretici"}
         </h1>
-        <p className="text-text-secondary text-sm mt-1">{"AI ile müzik üret. Metin yazarak profesyonel kalitede parçalar oluştur."}</p>
+        <p className="text-text-secondary text-sm mt-1">{"AI ile muzik uret. Metin yazarak profesyonel kalitede parcalar olustur."}</p>
       </div>
 
       <GlowCard color="purple" className="!p-4">
         <div className="flex items-start gap-3">
           <Info className="text-neon-purple shrink-0 mt-0.5" size={18} />
           <div className="space-y-2 text-sm">
-            <p className="text-neon-purple font-bold">{"Nasıl Kullanılır?"}</p>
+            <p className="text-neon-purple font-bold">{"Nasil Kullanilir?"}</p>
             <ol className="text-text-secondary space-y-1 list-decimal list-inside">
-              <li>{"Model seçin (MusicGen veya Stable Audio)"}</li>
-              <li>{"Müzik tarzını ve havasını yazın"}</li>
-              <li>{"\"Müzik Üret\" butonuna tıklayın"}</li>
+              <li>{"Muzik tarzini ve havasini yazin (Ingilizce daha iyi sonuc verir)"}</li>
+              <li>{"\"Muzik Uret\" butonuna tiklayin"}</li>
               <li>{"Dinleyin ve indirin"}</li>
             </ol>
           </div>
         </div>
       </GlowCard>
 
-      <div className="flex gap-2">
-        {models.map((m) => (
-          <button key={m.id} onClick={() => { setSelectedModel(m); setAudioUrl(null); setError(null); }}
-            className={`flex-1 px-3 py-2 rounded-lg text-xs border transition-all cursor-pointer text-center
-              ${selectedModel.id === m.id ? "border-neon-purple bg-neon-purple/10 text-neon-purple" : "border-base-300 text-text-secondary"}`}>
-            <div className="font-bold">{m.name}</div>
-            <div className="text-[10px] opacity-60">{m.desc}</div>
-          </button>
-        ))}
-      </div>
-
-      <TerminalCard title={`tools/music-gen/${selectedModel.id}`}>
+      <TerminalCard title="tools/music-gen">
         <div className="space-y-4">
           <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
             placeholder={"Happy pop music with guitar and drums, summer vibes"}
@@ -118,11 +97,11 @@ export default function MusicGeneratorPage() {
 
           {audioUrl && (
             <GlowCard color="green" className="!p-4">
-              <p className="text-neon-green text-sm font-bold mb-3"><Music size={14} className="inline mr-1" /> {"Müzik Hazır!"}</p>
+              <p className="text-neon-green text-sm font-bold mb-3"><Music size={14} className="inline mr-1" /> {"Muzik Hazir!"}</p>
               <audio src={audioUrl} controls className="w-full mb-3" />
               <div className="flex gap-2">
-                <NeonButton color="green" size="sm" className="flex-1" onClick={() => { const a = document.createElement("a"); a.href = audioUrl; a.download = `aitekin_music_${Date.now()}.wav`; a.click(); }}>
-                  <Download size={14} className="mr-1 inline" /> {"İndir"}
+                <NeonButton color="green" size="sm" className="flex-1" onClick={() => { const a = document.createElement("a"); a.href = audioUrl; a.download = `aitekin_music_${Date.now()}.mp3`; a.click(); }}>
+                  <Download size={14} className="mr-1 inline" /> {"Indir"}
                 </NeonButton>
                 <NeonButton color="pink" size="sm" variant="outline" onClick={() => { setAudioUrl(null); setPrompt(""); }}>
                   <Trash2 size={14} className="mr-1 inline" /> {"Temizle"}
@@ -132,13 +111,13 @@ export default function MusicGeneratorPage() {
           )}
 
           <NeonButton color="purple" className="w-full" onClick={generateMusic} disabled={generating || !prompt.trim()}>
-            {generating ? <><Loader2 size={16} className="mr-2 inline animate-spin" /> {"Üretiliyor..."}</> : <><Play size={16} className="mr-2 inline" /> {"Müzik Üret"}</>}
+            {generating ? <><Loader2 size={16} className="mr-2 inline animate-spin" /> {"Uretiliyor..."}</> : <><Play size={16} className="mr-2 inline" /> {"Muzik Uret"}</>}
           </NeonButton>
         </div>
       </TerminalCard>
 
       <div className="p-4 bg-base-200/50 border border-base-300 rounded-lg">
-        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Promptlarınız Hugging Face Spaces üzerinden işlenir. Ücretsiz GPU kotası sınırlıdır."}</p>
+        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Muzik Pollinations.ai uzerinden uretilir. Ucretsiz ve kayit gerektirmez."}</p>
       </div>
     </div>
   );

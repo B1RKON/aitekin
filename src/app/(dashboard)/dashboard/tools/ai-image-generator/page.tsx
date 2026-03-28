@@ -7,9 +7,9 @@ import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
 
 const models = [
-  { id: "flux", name: "FLUX.1 Schnell", desc: "En hizli, 1-4 adim", spaceIds: ["black-forest-labs/FLUX.1-schnell"], color: "cyan" as const },
-  { id: "sd35", name: "Stable Diffusion 3.5", desc: "Fotogercekci", spaceIds: ["stabilityai/stable-diffusion-3.5-large"], color: "purple" as const },
-  { id: "pixart", name: "PixArt-Sigma", desc: "4K kalite", spaceIds: ["PixArt-alpha/PixArt-Sigma"], color: "green" as const },
+  { id: "flux", name: "FLUX", desc: "Hizli & kaliteli", model: "flux", color: "cyan" as const },
+  { id: "flux-pro", name: "FLUX Pro", desc: "Profesyonel kalite", model: "flux-pro", color: "purple" as const },
+  { id: "turbo", name: "Turbo", desc: "Ultra hizli", model: "turbo", color: "green" as const },
 ];
 
 export default function AiImageGeneratorPage() {
@@ -25,38 +25,24 @@ export default function AiImageGeneratorPage() {
     setGenerating(true);
     setError(null);
     setImageUrl(null);
+    setProgress("Gorsel uretiliyor...");
 
     try {
-      const { connectGradio } = await import("@/lib/gradio-client");
-      const { client } = await connectGradio({
-        spaceIds: selectedModel.spaceIds,
-        onStatus: setProgress,
-      });
-      setProgress("Gorsel uretiliyor...");
+      const seed = Math.floor(Math.random() * 999999);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&model=${selectedModel.model}&seed=${seed}&nologo=true`;
 
-      const result = await client.predict("/infer", {
-        prompt: prompt,
-        seed: 0,
-        randomize_seed: true,
-        width: 1024,
-        height: 1024,
-        num_inference_steps: 4,
-      });
-
-      if (result?.data) {
-        const data = result.data as unknown[];
-        for (const item of data) {
-          if (item && typeof item === "object" && "url" in (item as Record<string, unknown>)) {
-            setImageUrl((item as Record<string, string>).url);
-            setProgress("");
-            return;
-          }
-        }
-        setError("Gorsel olusturuldu ancak dosya alinamadi.");
+      // Pollinations.ai gorsel uretip dogrudan URL olarak doner
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Gorsel uretilemedi. Lutfen tekrar deneyin.");
       }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setImageUrl(objectUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      setError(`Hata: ${msg}`);
+      setError(msg);
     } finally {
       setGenerating(false);
       setProgress("");
@@ -67,10 +53,10 @@ export default function AiImageGeneratorPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-neon-purple">&gt;</span> {"AI Görsel Üretimi"}
+          <span className="text-neon-purple">&gt;</span> {"AI Gorsel Uretimi"}
         </h1>
         <p className="text-text-secondary text-sm mt-1">
-          {"Metin yazarak görseller üretin. FLUX, Stable Diffusion ve daha fazlası."}
+          {"Metin yazarak gorseller uretin. FLUX modelleri ile sinir tanimayan yaraticilik."}
         </p>
       </div>
 
@@ -78,11 +64,11 @@ export default function AiImageGeneratorPage() {
         <div className="flex items-start gap-3">
           <Info className="text-neon-purple shrink-0 mt-0.5" size={18} />
           <div className="space-y-2 text-sm">
-            <p className="text-neon-purple font-bold">{"Nasıl Kullanılır?"}</p>
+            <p className="text-neon-purple font-bold">{"Nasil Kullanilir?"}</p>
             <ol className="text-text-secondary space-y-1 list-decimal list-inside">
-              <li>{"Model seçin (FLUX en hızlısı)"}</li>
-              <li>{"İngilizce detaylı prompt yazın"}</li>
-              <li>{"\"Görsel Üret\" butonuna tıklayın"}</li>
+              <li>{"Model secin"}</li>
+              <li>{"Ingilizce detayli prompt yazin"}</li>
+              <li>{"\"Gorsel Uret\" butonuna tiklayin"}</li>
               <li>{"Sonucu indirin"}</li>
             </ol>
           </div>
@@ -127,11 +113,11 @@ export default function AiImageGeneratorPage() {
 
           {imageUrl && (
             <GlowCard color="green" className="!p-4">
-              <p className="text-neon-green text-sm font-bold mb-3"><Sparkles size={14} className="inline mr-1" /> {"Görsel Hazır!"}</p>
-              <img src={imageUrl} alt="AI üretimi" className="w-full rounded-lg mb-3" />
+              <p className="text-neon-green text-sm font-bold mb-3"><Sparkles size={14} className="inline mr-1" /> {"Gorsel Hazir!"}</p>
+              <img src={imageUrl} alt="AI uretimi" className="w-full rounded-lg mb-3" />
               <div className="flex gap-2">
                 <NeonButton color="green" size="sm" className="flex-1" onClick={() => { const a = document.createElement("a"); a.href = imageUrl; a.download = `aitekin_image_${Date.now()}.png`; a.click(); }}>
-                  <Download size={14} className="mr-1 inline" /> {"İndir"}
+                  <Download size={14} className="mr-1 inline" /> {"Indir"}
                 </NeonButton>
                 <NeonButton color="pink" size="sm" variant="outline" onClick={() => { setImageUrl(null); setPrompt(""); }}>
                   <Trash2 size={14} className="mr-1 inline" /> {"Temizle"}
@@ -141,13 +127,13 @@ export default function AiImageGeneratorPage() {
           )}
 
           <NeonButton color="purple" className="w-full" onClick={generateImage} disabled={generating || !prompt.trim()}>
-            {generating ? <><Loader2 size={16} className="mr-2 inline animate-spin" /> {"Üretiliyor..."}</> : <><ImageIcon size={16} className="mr-2 inline" /> {"Görsel Üret"}</>}
+            {generating ? <><Loader2 size={16} className="mr-2 inline animate-spin" /> {"Uretiliyor..."}</> : <><ImageIcon size={16} className="mr-2 inline" /> {"Gorsel Uret"}</>}
           </NeonButton>
         </div>
       </TerminalCard>
 
       <div className="p-4 bg-base-200/50 border border-base-300 rounded-lg">
-        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Promptlariniz ve uretilen gorseller Hugging Face sunucularinda islenir."}</p>
+        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Gorseller Pollinations.ai uzerinden uretilir. Ucretsiz ve sinirsiz."}</p>
       </div>
     </div>
   );
