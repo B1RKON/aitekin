@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const ai = new GoogleGenAI({ apiKey });
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-2.5-flash",
       contents: `Generate an image of: ${prompt}. Only respond with the image, no text.`,
       config: {
         responseModalities: ["image", "text"],
