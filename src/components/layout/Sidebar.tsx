@@ -30,6 +30,7 @@ import {
   Download,
 } from "lucide-react";
 import { useState } from "react";
+import { warmToolSpaces } from "@/lib/space-warmer";
 
 interface NavItem {
   icon: typeof Terminal;
@@ -125,6 +126,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
                   <Link
                     key={item.href}
                     href={item.href}
+                    onMouseEnter={() => warmToolSpaces(item.href)}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors
                       ${pathname === item.href
                         ? "bg-neon-cyan/10 text-neon-cyan"

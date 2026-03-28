@@ -1,7 +1,9 @@
 /**
- * Gradio Client Helper - Retry & Fallback mantigi
- * HF Spaces uyku modundan uyandirilmasi ve otomatik fallback
+ * Gradio Client Helper - Retry, Fallback & Cache mantigi
+ * HF Spaces uyku modundan uyandirilmasi, otomatik fallback ve cache
  */
+
+import { getCachedClient, cacheClient } from "./space-warmer";
 
 interface ConnectOptions {
   spaceIds: string[];
@@ -16,6 +18,16 @@ export async function connectGradio({
   maxRetries = 2,
   onStatus,
 }: ConnectOptions) {
+  // Once cache'e bak — pre-warming basarili olduysa aninda don
+  for (const spaceId of spaceIds) {
+    const cached = getCachedClient(spaceId);
+    if (cached) {
+      onStatus?.("Baglanti hazir!");
+      return { client: cached, spaceId };
+    }
+  }
+
+  // Cache'te yoksa normal retry mantigi
   const { Client } = await import("@gradio/client");
 
   for (const spaceId of spaceIds) {
@@ -31,6 +43,10 @@ export async function connectGradio({
           Client.connect(spaceId),
           timeoutPromise,
         ]);
+
+        // Basarili baglanti — cache'e kaydet
+        cacheClient(spaceId, client);
+
         return { client, spaceId };
       } catch (err) {
         const msg = err instanceof Error ? err.message : "";
@@ -44,7 +60,7 @@ export async function connectGradio({
 
         if (!isLastSpace) {
           onStatus?.("Alternatif model deneniyor...");
-          break; // sonraki space'e gec
+          break;
         }
 
         if (isLastAttempt && isLastSpace) {

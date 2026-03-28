@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import AuthOverlay from "@/components/ui/AuthOverlay";
+import { warmAllSpaces } from "@/lib/space-warmer";
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Dashboard'a giris aninda tum HF Space'leri arka planda uyandır
+  useEffect(() => {
+    warmAllSpaces();
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-base-100">
