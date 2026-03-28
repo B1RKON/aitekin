@@ -11,10 +11,8 @@ interface Message {
 }
 
 const models = [
-  { id: "nvidia/nemotron-3-nano-30b-a3b:free", name: "Nemotron Nano", desc: "Hızlı & akıllı" },
-  { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B", desc: "Güçlü (yavaş)" },
-  { id: "arcee-ai/trinity-large-preview:free", name: "Trinity Large", desc: "Genel sohbet" },
-  { id: "openrouter/free", name: "Auto (Ücretsiz)", desc: "Otomatik seçim" },
+  { id: "fast", name: "Llama 3 8B", desc: "Hizli & akilli" },
+  { id: "powerful", name: "GPT-OSS 120B", desc: "Guclu (yavas)" },
 ];
 
 export default function AiChatPage() {
