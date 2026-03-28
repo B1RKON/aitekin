@@ -45,7 +45,19 @@
       "Bash(curl -s \"https://kglhbsmfrvabsbmnifpi.supabase.co/rest/v1/\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnbGhic21mcnZhYnNibW5pZnBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA0NTYsImV4cCI6MjA5MDIxNjQ1Nn0.IePV_dsSMre1bASBiQpQFiU_zLUdOut7jT5ETOGWRls\")",
       "Bash(vercel env:*)",
       "Bash(vercel --prod --yes)",
-      "Bash(curl -s -X POST \"https://kglhbsmfrvabsbmnifpi.supabase.co/rest/v1/rpc/exec_sql\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnbGhic21mcnZhYnNibW5pZnBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA0NTYsImV4cCI6MjA5MDIxNjQ1Nn0.IePV_dsSMre1bASBiQpQFiU_zLUdOut7jT5ETOGWRls\" -H \"Content-Type: application/json\" -d '{\"\"query\"\": \"\"ALTER TABLE public.waitlist ADD COLUMN IF NOT EXISTS invite_token TEXT UNIQUE\"\"}')"
+      "Bash(curl -s -X POST \"https://kglhbsmfrvabsbmnifpi.supabase.co/rest/v1/rpc/exec_sql\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnbGhic21mcnZhYnNibW5pZnBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDA0NTYsImV4cCI6MjA5MDIxNjQ1Nn0.IePV_dsSMre1bASBiQpQFiU_zLUdOut7jT5ETOGWRls\" -H \"Content-Type: application/json\" -d '{\"\"query\"\": \"\"ALTER TABLE public.waitlist ADD COLUMN IF NOT EXISTS invite_token TEXT UNIQUE\"\"}')",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(find . -name music-gen* -o -name dashboard -type d)",
+      "Bash(ls \"src/app/\\(dashboard\\)/dashboard/tools/\")",
+      "Bash(ls -la /d/aitekin/src/app/\\\\\\(dashboard\\\\\\)/dashboard/tools/video-downloader/)",
+      "Bash(vercel --prod)",
+      "Bash(vercel deploy:*)",
+      "Bash(curl -s \"https://openrouter.ai/api/v1/models\" -H \"Authorization: Bearer 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\")",
+      "Bash(curl -s \"https://openrouter.ai/api/v1/models\" -H \"Authorization: Bearer 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\" -o /tmp/models.json)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const data=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''D:/aitekin/tmp_models.json'',''utf8''\\)\\);data.data.filter\\(m=>m.id.includes\\(''gemini''\\)&&m.id.includes\\(''flash''\\)\\).forEach\\(m=>console.log\\(m.id\\)\\)\")"
     ]
   }
 }

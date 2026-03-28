@@ -31,15 +31,14 @@ export default function AiImageGeneratorPage() {
       const seed = Math.floor(Math.random() * 999999);
       const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&model=${selectedModel.model}&seed=${seed}&nologo=true`;
 
-      // Pollinations.ai gorsel uretip dogrudan URL olarak doner
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Gorsel uretilemedi. Lutfen tekrar deneyin.");
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      setImageUrl(objectUrl);
+      // Pollinations.ai dogrudan gorsel URL'i doner - img tag ile yukle
+      await new Promise<void>((resolve, reject) => {
+        const img = new window.Image();
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Gorsel uretilemedi. Lutfen tekrar deneyin."));
+        img.src = url;
+      });
+      setImageUrl(url);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
       setError(msg);

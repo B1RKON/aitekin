@@ -21,19 +21,15 @@ export default function MusicGeneratorPage() {
     setProgress("Muzik uretiliyor...");
 
     try {
-      const response = await fetch("https://gen.pollinations.ai/v1/audio/speech", {
+      const response = await fetch("/api/music-generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "elevenmusic",
-          input: prompt,
-          voice: "alloy",
-          response_format: "mp3",
-        }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
-        throw new Error("Muzik uretilemedi. Lutfen tekrar deneyin.");
+        const err = await response.json().catch(() => ({ error: "Muzik uretilemedi." }));
+        throw new Error(err.error || "Muzik uretilemedi. Lutfen tekrar deneyin.");
       }
 
       const blob = await response.blob();
