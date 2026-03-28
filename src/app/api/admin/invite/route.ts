@@ -83,9 +83,10 @@ export async function POST(req: NextRequest) {
 
 // Waitlist listesini getir
 export async function GET(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
+  // Secret'i header'dan veya query param'dan al (geriye uyumluluk)
+  const secret = req.headers.get("x-admin-secret") || req.nextUrl.searchParams.get("secret");
 
-  if (secret !== process.env.ADMIN_SECRET) {
+  if (!secret || secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Yetkisiz erisim" }, { status: 401 });
   }
 

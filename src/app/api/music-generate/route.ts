@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
 
     const { prompt } = await req.json();
 
+    // Input validasyonu
+    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 2000) {
+      return NextResponse.json({ error: "Gecersiz prompt." }, { status: 400 });
+    }
+
     const response = await fetch("https://gen.pollinations.ai/v1/audio/speech", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,7 +47,7 @@ export async function POST(req: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { error: "Sunucu hatasi olustu." },
+      { error: "Bir hata olustu. Lutfen tekrar deneyin." },
       { status: 500 }
     );
   }

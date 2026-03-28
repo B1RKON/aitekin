@@ -13,9 +13,19 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { url, videoQuality, downloadMode, audioFormat, audioBitrate } = body;
 
-    if (!url) {
+    if (!url || typeof url !== "string" || url.length > 2000) {
       return NextResponse.json(
-        { error: "URL gerekli" },
+        { error: "Gecersiz URL." },
+        { status: 400 }
+      );
+    }
+
+    // URL format kontrolu
+    try {
+      new URL(url);
+    } catch {
+      return NextResponse.json(
+        { error: "Gecersiz URL formati." },
         { status: 400 }
       );
     }

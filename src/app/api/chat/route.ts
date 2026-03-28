@@ -58,7 +58,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { messages, model: requestedModel } = await req.json();
+    const body = await req.json();
+    const { messages, model: requestedModel } = body;
+
+    // Input validasyonu
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+      return NextResponse.json({ error: "Gecersiz istek." }, { status: 400 });
+    }
+    for (const msg of messages) {
+      if (!msg.role || !msg.content || typeof msg.content !== "string" || msg.content.length > 10000) {
+        return NextResponse.json({ error: "Gecersiz mesaj formati." }, { status: 400 });
+      }
+    }
 
     // Provider'lari sirayla dene
     for (const provider of providers) {

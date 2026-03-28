@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
 
     const { prompt, model: modelKey } = await req.json();
 
+    // Input validasyonu
+    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0 || prompt.length > 2000) {
+      return NextResponse.json({ error: "Gecersiz prompt. Maksimum 2000 karakter." }, { status: 400 });
+    }
+
     const accountId = process.env.CF_ACCOUNT_ID;
     const apiToken = process.env.CF_API_TOKEN;
 
@@ -49,10 +54,9 @@ export async function POST(req: NextRequest) {
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
       return NextResponse.json(
-        { error: `Gorsel uretilemedi: ${errorText}` },
-        { status: response.status }
+        { error: "Gorsel uretilemedi. Lutfen tekrar deneyin." },
+        { status: 500 }
       );
     }
 
@@ -64,10 +68,9 @@ export async function POST(req: NextRequest) {
       imageUrl: `data:image/png;base64,${base64}`,
       remaining,
     });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
+  } catch {
     return NextResponse.json(
-      { error: `Hata: ${msg}` },
+      { error: "Bir hata olustu. Lutfen tekrar deneyin." },
       { status: 500 }
     );
   }

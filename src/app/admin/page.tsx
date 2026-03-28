@@ -28,7 +28,9 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
 
-    const res = await fetch(`/api/admin/invite?secret=${encodeURIComponent(secret)}`);
+    const res = await fetch("/api/admin/invite", {
+      headers: { "x-admin-secret": secret },
+    });
     const data = await res.json();
 
     if (res.ok) {
@@ -44,7 +46,7 @@ export default function AdminPage() {
     setInviting(email);
     const res = await fetch("/api/admin/invite", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-admin-secret": secret },
       body: JSON.stringify({ email, secret }),
     });
 
@@ -59,7 +61,9 @@ export default function AdminPage() {
   }
 
   async function refreshList() {
-    const res = await fetch(`/api/admin/invite?secret=${encodeURIComponent(secret)}`);
+    const res = await fetch("/api/admin/invite", {
+      headers: { "x-admin-secret": secret },
+    });
     const data = await res.json();
     if (res.ok) setEntries(data.data || []);
   }
