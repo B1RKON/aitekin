@@ -7,8 +7,8 @@ import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
 
 const models = [
-  { id: "musicgen", name: "MusicGen (Meta)", desc: "Melodiler ve jingle'lar", spaceId: "facebook/MusicGen", color: "purple" as const },
-  { id: "stable", name: "Stable Audio", desc: "Ses efektleri ve ambient", spaceId: "stabilityai/stable-audio-open-1-0", color: "cyan" as const },
+  { id: "musicgen", name: "MusicGen (Meta)", desc: "Melodiler ve jingle'lar", spaceIds: ["facebook/MusicGen", "Surn/UnlimitedMusicGen"], color: "purple" as const },
+  { id: "stable", name: "Stable Audio", desc: "Ses efektleri ve ambient", spaceIds: ["stabilityai/stable-audio-open-1-0"], color: "cyan" as const },
 ];
 
 export default function MusicGeneratorPage() {
@@ -24,16 +24,14 @@ export default function MusicGeneratorPage() {
     setGenerating(true);
     setError(null);
     setAudioUrl(null);
-    setProgress("AI modeli bağlanıyor...");
 
     try {
-      const { Client } = await import("@gradio/client");
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 180000)
-      );
-      const clientPromise = Client.connect(selectedModel.spaceId);
-      const client = await Promise.race([clientPromise, timeoutPromise]);
-      setProgress("Müzik üretiliyor... 30sn-1dk sürebilir.");
+      const { connectGradio } = await import("@/lib/gradio-client");
+      const { client } = await connectGradio({
+        spaceIds: selectedModel.spaceIds,
+        onStatus: setProgress,
+      });
+      setProgress("Muzik uretiliyor... 30sn-1dk surebilir.");
 
       const result = await client.predict("/predict", {
         text: prompt,
@@ -49,14 +47,10 @@ export default function MusicGeneratorPage() {
           }
         }
       }
-      setError("Müzik oluşturuldu ancak dosya alınamadı.");
+      setError("Muzik olusturuldu ancak dosya alinamadi.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      if (msg === "TIMEOUT") {
-        setError("İşlem zaman aşımına uğradı. Space meşgul olabilir. Lütfen tekrar deneyin.");
-      } else {
-        setError(`Hata: ${msg}`);
-      }
+      setError(msg);
     } finally {
       setGenerating(false);
       setProgress("");

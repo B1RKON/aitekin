@@ -7,9 +7,9 @@ import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
 
 const models = [
-  { id: "flux", name: "FLUX.1 Schnell", desc: "En hızlı, 1-4 adım", spaceId: "black-forest-labs/FLUX.1-schnell", color: "cyan" as const },
-  { id: "sd35", name: "Stable Diffusion 3.5", desc: "Fotogerçekçi", spaceId: "stabilityai/stable-diffusion-3.5-large", color: "purple" as const },
-  { id: "pixart", name: "PixArt-Sigma", desc: "4K kalite", spaceId: "PixArt-alpha/PixArt-Sigma", color: "green" as const },
+  { id: "gemini-flash", name: "Gemini Flash", desc: "Hizli & guvenilir", color: "cyan" as const },
+  { id: "flux", name: "FLUX.1 Schnell", desc: "En hizli, 1-4 adim", spaceId: "black-forest-labs/FLUX.1-schnell", color: "purple" as const },
+  { id: "sd35", name: "Stable Diffusion 3.5", desc: "Fotogercekci", spaceId: "stabilityai/stable-diffusion-3.5-large", color: "green" as const },
 ];
 
 export default function AiImageGeneratorPage() {
@@ -25,44 +25,59 @@ export default function AiImageGeneratorPage() {
     setGenerating(true);
     setError(null);
     setImageUrl(null);
-    setProgress("AI modeli bağlanıyor...");
 
     try {
-      const { Client } = await import("@gradio/client");
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 180000)
-      );
-      const clientPromise = Client.connect(selectedModel.spaceId);
-      const client = await Promise.race([clientPromise, timeoutPromise]);
-      setProgress("Görsel üretiliyor...");
-
-      const result = await client.predict("/infer", {
-        prompt: prompt,
-        seed: 0,
-        randomize_seed: true,
-        width: 1024,
-        height: 1024,
-        num_inference_steps: 4,
-      });
-
-      if (result?.data) {
-        const data = result.data as unknown[];
-        for (const item of data) {
-          if (item && typeof item === "object" && "url" in (item as Record<string, unknown>)) {
-            setImageUrl((item as Record<string, string>).url);
-            setProgress("");
-            return;
-          }
+      if (selectedModel.id === "gemini-flash") {
+        // OpenRouter API kullan - en guvenilir yontem
+        setProgress("Gorsel uretiliyor...");
+        const res = await fetch("/api/image-generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: `Generate an image: ${prompt}` }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          setError(data.error);
+        } else if (data.imageUrl) {
+          setImageUrl(data.imageUrl);
+        } else {
+          setError("Gorsel uretilemedi.");
         }
-        setError("Görsel oluşturuldu ancak dosya alınamadı.");
+      } else {
+        // Gradio client ile HF Space kullan (fallback)
+        setProgress("AI modeli baglaniyor...");
+        const { connectGradio } = await import("@/lib/gradio-client");
+        const spaceId = "spaceId" in selectedModel ? (selectedModel as { spaceId: string }).spaceId : "";
+        const { client } = await connectGradio({
+          spaceIds: [spaceId],
+          onStatus: setProgress,
+        });
+        setProgress("Gorsel uretiliyor...");
+
+        const result = await client.predict("/infer", {
+          prompt: prompt,
+          seed: 0,
+          randomize_seed: true,
+          width: 1024,
+          height: 1024,
+          num_inference_steps: 4,
+        });
+
+        if (result?.data) {
+          const data = result.data as unknown[];
+          for (const item of data) {
+            if (item && typeof item === "object" && "url" in (item as Record<string, unknown>)) {
+              setImageUrl((item as Record<string, string>).url);
+              setProgress("");
+              return;
+            }
+          }
+          setError("Gorsel olusturuldu ancak dosya alinamadi.");
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      if (msg === "TIMEOUT") {
-        setError("İşlem zaman aşımına uğradı. Space meşgul olabilir. Lütfen tekrar deneyin.");
-      } else {
-        setError(`Hata: ${msg}`);
-      }
+      setError(`Hata: ${msg}`);
     } finally {
       setGenerating(false);
       setProgress("");
@@ -153,7 +168,7 @@ export default function AiImageGeneratorPage() {
       </TerminalCard>
 
       <div className="p-4 bg-base-200/50 border border-base-300 rounded-lg">
-        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Promptlarınız ve üretilen görseller Hugging Face sunucularında işlenir. Ücretsiz GPU kotası sınırlıdır."}</p>
+        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Gemini Flash modeli OpenRouter uzerinden, diger modeller Hugging Face uzerinden calisir."}</p>
       </div>
     </div>
   );

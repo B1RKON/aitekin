@@ -29,16 +29,15 @@ export default function ImageUpscalerPage() {
     setProcessing(true);
     setError(null);
     setResultUrl(null);
-    setProgress("AI modeli bağlanıyor...");
 
     try {
-      const { Client, handle_file } = await import("@gradio/client");
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 180000)
-      );
-      const clientPromise = Client.connect("finegrain/finegrain-image-enhancer");
-      const client = await Promise.race([clientPromise, timeoutPromise]);
-      setProgress(`${scale}x büyütme yapılıyor...`);
+      const { handle_file } = await import("@gradio/client");
+      const { connectGradio } = await import("@/lib/gradio-client");
+      const { client } = await connectGradio({
+        spaceIds: ["finegrain/finegrain-image-enhancer"],
+        onStatus: setProgress,
+      });
+      setProgress(`${scale}x buyutme yapiliyor...`);
 
       const result = await client.predict("/process", {
         input_image: handle_file(file),
@@ -66,14 +65,10 @@ export default function ImageUpscalerPage() {
           }
         }
       }
-      setError("İşlem tamamlandı ancak sonuç alınamadı.");
+      setError("Islem tamamlandi ancak sonuc alinamadi.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      if (msg === "TIMEOUT") {
-        setError("İşlem zaman aşımına uğradı. Space meşgul olabilir. Lütfen tekrar deneyin.");
-      } else {
-        setError(`Hata: ${msg}`);
-      }
+      setError(msg);
     } finally {
       setProcessing(false);
       setProgress("");

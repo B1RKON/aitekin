@@ -52,20 +52,15 @@ export default function VideoGeneratorPage() {
     setGenerating(true);
     setError(null);
     setVideoUrl(null);
-    setProgress("AI modeli yükleniyor...");
 
     try {
-      const { Client } = await import("@gradio/client");
-      setProgress(`${selectedModel.name} bağlanıyor... (Space uyku modundaysa 1-2dk sürebilir)`);
-
-      // 3 dakika timeout
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 180000)
-      );
-
-      const clientPromise = Client.connect(selectedModel.spaceId);
-      const client = await Promise.race([clientPromise, timeoutPromise]);
-      setProgress("Video üretiliyor... Bu işlem 1-3dk sürebilir.");
+      const { connectGradio } = await import("@/lib/gradio-client");
+      const { client } = await connectGradio({
+        spaceIds: [selectedModel.spaceId],
+        timeoutMs: 180000,
+        onStatus: setProgress,
+      });
+      setProgress("Video uretiliyor... Bu islem 1-3dk surebilir.");
 
       let result;
 
@@ -137,17 +132,8 @@ export default function VideoGeneratorPage() {
         setError("Video üretilemedi. Model meşgul olabilir, lütfen tekrar deneyin.");
       }
     } catch (err) {
-      console.error("Video üretim hatası:", err);
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      if (msg === "TIMEOUT") {
-        setError("İşlem zaman aşımına uğradı (3dk). Space meşgul veya uyku modunda olabilir. Lütfen farklı bir model deneyin veya birkaç dakika sonra tekrar deneyin.");
-      } else if (msg.includes("queue") || msg.includes("Queue")) {
-        setError("Model şu an yoğun (kuyrukta). Lütfen birkaç dakika sonra tekrar deneyin veya farklı model seçin.");
-      } else if (msg.includes("sleep") || msg.includes("awake") || msg.includes("loading")) {
-        setError("Model uyku modundan uyanıyor. 1-2 dakika bekleyip tekrar deneyin.");
-      } else {
-        setError(`Hata: ${msg}\n\nFarklı bir model deneyebilirsiniz.`);
-      }
+      setError(msg + "\n\nFarkli bir model deneyebilirsiniz.");
     } finally {
       setGenerating(false);
       if (!videoUrl) setProgress("");

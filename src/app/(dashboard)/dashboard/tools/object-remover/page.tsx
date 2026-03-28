@@ -28,39 +28,61 @@ export default function ObjectRemoverPage() {
     setProcessing(true);
     setError(null);
     setResultUrl(null);
-    setProgress("AI modeli bağlanıyor...");
+    setProgress("AI modeli yukleniyor (ilk kullanımda ~50MB indirir)...");
 
     try {
-      const { Client, handle_file } = await import("@gradio/client");
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 180000)
-      );
-      const clientPromise = Client.connect("not-lain/background-removal");
-      const client = await Promise.race([clientPromise, timeoutPromise]);
-      setProgress("Arka plan kaldırılıyor...");
+      const { AutoModel, AutoProcessor, RawImage } = await import("@huggingface/transformers");
 
-      const result = await client.predict("/predict", {
-        input_image: handle_file(file),
+      const model = await AutoModel.from_pretrained("briaai/RMBG-1.4", {
+        // @ts-expect-error custom model config
+        config: { model_type: "custom" },
+      });
+      const processor = await AutoProcessor.from_pretrained("briaai/RMBG-1.4", {
+        config: {
+          do_normalize: true,
+          do_pad: false,
+          do_rescale: true,
+          do_resize: true,
+          image_mean: [0.5, 0.5, 0.5],
+          feature_extractor_type: "ImageFeatureExtractor",
+          image_std: [1, 1, 1],
+          resample: 2,
+          rescale_factor: 0.00392156862745098,
+          size: { width: 1024, height: 1024 },
+        },
       });
 
-      if (result?.data) {
-        const data = result.data as unknown[];
-        for (const item of data) {
-          if (item && typeof item === "object" && "url" in (item as Record<string, unknown>)) {
-            setResultUrl((item as Record<string, string>).url);
-            setProgress("");
-            return;
-          }
-        }
+      setProgress("Arka plan kaldiriliyor...");
+
+      const imgUrl = URL.createObjectURL(file);
+      const image = await RawImage.fromURL(imgUrl);
+      URL.revokeObjectURL(imgUrl);
+
+      const { pixel_values } = await processor(image);
+      const { output } = await model({ input: pixel_values });
+
+      const maskData = await RawImage.fromTensor(output[0].mul(255).to("uint8")).resize(image.width, image.height);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const ctx = canvas.getContext("2d")!;
+
+      const img = new window.Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise((resolve) => { img.onload = resolve; });
+      ctx.drawImage(img, 0, 0);
+
+      const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < maskData.data.length; i++) {
+        pixelData.data[i * 4 + 3] = maskData.data[i];
       }
-      setError("İşlem tamamlandı ancak sonuç alınamadı.");
+      ctx.putImageData(pixelData, 0, 0);
+
+      setResultUrl(canvas.toDataURL("image/png"));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      if (msg === "TIMEOUT") {
-        setError("İşlem zaman aşımına uğradı. Space meşgul olabilir. Lütfen tekrar deneyin.");
-      } else {
-        setError(`Hata: ${msg}`);
-      }
+      setError(`Hata: ${msg}`);
     } finally {
       setProcessing(false);
       setProgress("");
@@ -166,7 +188,7 @@ export default function ObjectRemoverPage() {
       </GlowCard>
 
       <div className="p-4 bg-base-200/50 border border-base-300 rounded-lg">
-        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Fotoğrafınız Hugging Face Spaces üzerinden işlenir."}</p>
+        <p className="text-text-secondary text-xs"><span className="text-neon-green font-bold">{"Gizlilik:"}</span> {"Tum islemler tarayicinizda yapilir. Fotografiniz hicbir sunucuya gonderilmez."}</p>
       </div>
     </div>
   );

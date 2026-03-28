@@ -7,8 +7,8 @@ import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
 
 const tools = [
-  { id: "gfpgan", name: "Yüz İyileştirme (GFPGAN)", desc: "Bulanık yüzleri netleştir, eski fotoğrafları onar", spaceId: "TencentARC/GFPGAN", color: "green" as const },
-  { id: "codeformer", name: "CodeFormer", desc: "İleri seviye yüz restorasyonu", spaceId: "sczhou/CodeFormer", color: "cyan" as const },
+  { id: "gfpgan", name: "Yuz Iyilestirme (GFPGAN)", desc: "Bulanik yuzleri netlestir, eski fotograflari onar", spaceIds: ["TencentARC/GFPGAN"], color: "green" as const },
+  { id: "codeformer", name: "CodeFormer", desc: "Ileri seviye yuz restorasyonu", spaceIds: ["sczhou/CodeFormer"], color: "cyan" as const },
 ];
 
 export default function PhotoRestorePage() {
@@ -34,16 +34,15 @@ export default function PhotoRestorePage() {
     setProcessing(true);
     setError(null);
     setResultUrl(null);
-    setProgress("AI modeli bağlanıyor...");
 
     try {
-      const { Client, handle_file } = await import("@gradio/client");
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("TIMEOUT")), 180000)
-      );
-      const clientPromise = Client.connect(selectedTool.spaceId);
-      const client = await Promise.race([clientPromise, timeoutPromise]);
-      setProgress("Fotoğraf onarılıyor...");
+      const { handle_file } = await import("@gradio/client");
+      const { connectGradio } = await import("@/lib/gradio-client");
+      const { client } = await connectGradio({
+        spaceIds: selectedTool.spaceIds,
+        onStatus: setProgress,
+      });
+      setProgress("Fotograf onariliyor...");
 
       let result;
       if (selectedTool.id === "gfpgan") {
@@ -68,14 +67,10 @@ export default function PhotoRestorePage() {
           }
         }
       }
-      setError("İşlem tamamlandı ancak sonuç alınamadı.");
+      setError("Islem tamamlandi ancak sonuc alinamadi.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bilinmeyen hata";
-      if (msg === "TIMEOUT") {
-        setError("İşlem zaman aşımına uğradı. Space meşgul olabilir. Lütfen tekrar deneyin.");
-      } else {
-        setError(`Hata: ${msg}`);
-      }
+      setError(msg);
     } finally {
       setProcessing(false);
       setProgress("");
