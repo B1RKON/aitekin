@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "aitekin.com",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-preview:thinking",
+        model: "google/gemini-2.5-flash-image",
         messages: [
           {
             role: "user",
