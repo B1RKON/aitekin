@@ -38,9 +38,30 @@ export async function POST(req: NextRequest) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aitekin.com";
       const inviteLink = `${siteUrl}/register?invite=${token}`;
 
+      // Davet edilen kisiye davet maili gonder
       await resend.emails.send({
         from: "aitekin.com <onboarding@resend.dev>",
-        to: "aytekinbirkon@gmail.com",
+        to: email,
+        subject: "aitekin.com'a Davet Edildiniz!",
+        html: `
+          <div style="font-family: monospace; background: #000; color: #E4E4E7; padding: 24px; border-radius: 12px;">
+            <h2 style="color: #00FFE5;">aitekin.com'a Davetlisiniz!</h2>
+            <p style="color: #E4E4E7;">Merhaba,</p>
+            <p style="color: #E4E4E7;">aitekin.com platformuna davet edildiniz. Asagidaki linke tiklayarak hesabinizi olusturabilirsiniz:</p>
+            <p style="margin: 20px 0;"><a href="${inviteLink}" style="color: #000; background: #00FFE5; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Kayit Ol</a></p>
+            <p style="color: #71717A; font-size: 12px;">veya bu linki tarayiciniza yapistiriniz:</p>
+            <p style="color: #00FFE5; font-size: 12px; word-break: break-all;">${inviteLink}</p>
+            <hr style="border-color: #1E1E2E;" />
+            <p style="color: #71717A; font-size: 12px;">aitekin.com davet sistemi</p>
+          </div>
+        `,
+      });
+
+      // Admin'e bildirim gonder
+      const notifyEmail = process.env.NOTIFY_EMAIL || "aytekinbirkon@gmail.com";
+      await resend.emails.send({
+        from: "aitekin.com <onboarding@resend.dev>",
+        to: notifyEmail,
         subject: `Davet Gonderildi: ${email}`,
         html: `
           <div style="font-family: monospace; background: #000; color: #E4E4E7; padding: 24px; border-radius: 12px;">
