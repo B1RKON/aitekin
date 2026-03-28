@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkDailyLimit } from "@/lib/rate-limiter";
 
-export const runtime = "edge";
+// Gunluk limit: toplam 10000 chat istegi (tum provider'lar birlesik)
+const DAILY_CHAT_LIMIT = 10000;
 
 // Provider rotasyonu: Bir provider basarisiz olursa sonrakine gec
 const providers = [
@@ -48,6 +50,14 @@ function getProviderModel(provider: typeof providers[0], requestedModel?: string
 
 export async function POST(req: NextRequest) {
   try {
+    const { allowed } = checkDailyLimit("chat", DAILY_CHAT_LIMIT);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Gunluk sohbet limiti doldu. Yarin tekrar deneyin!" },
+        { status: 429 }
+      );
+    }
+
     const { messages, model: requestedModel } = await req.json();
 
     // Provider'lari sirayla dene

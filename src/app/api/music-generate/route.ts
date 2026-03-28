@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkDailyLimit } from "@/lib/rate-limiter";
+
+const DAILY_MUSIC_LIMIT = 200;
 
 export async function POST(req: NextRequest) {
   try {
+    const { allowed } = checkDailyLimit("music-generate", DAILY_MUSIC_LIMIT);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Gunluk muzik uretim limiti doldu. Yarin tekrar deneyin!" },
+        { status: 429 }
+      );
+    }
+
     const { prompt } = await req.json();
 
     const response = await fetch("https://gen.pollinations.ai/v1/audio/speech", {

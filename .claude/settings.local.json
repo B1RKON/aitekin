@@ -57,7 +57,10 @@
       "Bash(curl -s \"https://openrouter.ai/api/v1/models\" -H \"Authorization: Bearer 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\")",
       "Bash(curl -s \"https://openrouter.ai/api/v1/models\" -H \"Authorization: Bearer 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\" -o /tmp/models.json)",
       "Bash(node -e \":*)",
-      "Bash(node -e \"const data=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''D:/aitekin/tmp_models.json'',''utf8''\\)\\);data.data.filter\\(m=>m.id.includes\\(''gemini''\\)&&m.id.includes\\(''flash''\\)\\).forEach\\(m=>console.log\\(m.id\\)\\)\")"
+      "Bash(node -e \"const data=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''D:/aitekin/tmp_models.json'',''utf8''\\)\\);data.data.filter\\(m=>m.id.includes\\(''gemini''\\)&&m.id.includes\\(''flash''\\)\\).forEach\\(m=>console.log\\(m.id\\)\\)\")",
+      "WebFetch(domain:www.pixazo.ai)",
+      "WebFetch(domain:developer.puter.com)",
+      "Bash(npm list:*)"
     ]
   }
 }
