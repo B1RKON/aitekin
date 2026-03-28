@@ -70,7 +70,9 @@
       "Bash(curl -s \"https://api.cloudflare.com/client/v4/accounts\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
       "Bash(curl -s \"https://api.cloudflare.com/client/v4/memberships\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
       "Bash(curl -s \"https://api.cloudflare.com/client/v4/user\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")",
-      "Bash(curl -s \"https://api.cloudflare.com/client/v4/accounts/6149f6b114cf80b25a878c720f83f12c/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\" -H \"Content-Type: application/json\" -d '{\"\"prompt\"\":\"\"A cute cat\"\"}' --output /tmp/test_image.png -w \"%{http_code}\")"
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/accounts/6149f6b114cf80b25a878c720f83f12c/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\" -H \"Content-Type: application/json\" -d '{\"\"prompt\"\":\"\"A cute cat\"\"}' --output /tmp/test_image.png -w \"%{http_code}\")",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" \"https://gen.pollinations.ai/v1/audio/speech\" -H \"Content-Type: application/json\" -d '{\"\"model\"\":\"\"elevenmusic\"\",\"\"input\"\":\"\"Lo-fi chill beats\"\",\"\"voice\"\":\"\"alloy\"\",\"\"response_format\"\":\"\"mp3\"\"}' -o /dev/null)",
+      "Bash(curl -s \"https://api.cloudflare.com/client/v4/accounts/6149f6b114cf80b25a878c720f83f12c/ai/finetunes\" -H \"Authorization: Bearer cfut_Pb25tBO6NqW0iJTdoP81JpT4ewYe3oOuqAuaC6PF0cc429c6\")"
     ]
   }
 }
