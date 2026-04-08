@@ -16,7 +16,9 @@ import IntroScreen from "./ui/IntroScreen";
 import Crosshair from "./ui/Crosshair";
 import HudHint from "./ui/HudHint";
 import PauseMenu from "./ui/PauseMenu";
+import MobileControls from "./ui/MobileControls";
 import { ShowroomTool } from "./showroomTools";
+import { detectMobile, mobileInput } from "./mobileInput";
 
 // Keyboard controls map
 const keyboardMap = [
@@ -42,8 +44,14 @@ export default function Showroom() {
   const [isPaused, setIsPaused] = useState(false);
   const [focusedTool, setFocusedTool] = useState<ShowroomTool | null>(null);
   const [attackTrigger, setAttackTrigger] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const standRefs = useRef<Map<string, THREE.Object3D>>(new Map());
   const pointerLockRef = useRef<PointerLockControlsRef | null>(null);
+
+  // Mobile detection
+  useEffect(() => {
+    setIsMobile(detectMobile());
+  }, []);
 
   // Window size tracking
   useEffect(() => {
@@ -69,8 +77,9 @@ export default function Showroom() {
     };
   }, []);
 
-  // Pointer lock change listener (ESC ile pause)
+  // Pointer lock change listener (ESC ile pause) - sadece desktop
   useEffect(() => {
+    if (isMobile) return;
     const onLockChange = () => {
       if (!document.pointerLockElement && started) {
         setIsPaused(true);
@@ -79,7 +88,21 @@ export default function Showroom() {
     document.addEventListener("pointerlockchange", onLockChange);
     return () =>
       document.removeEventListener("pointerlockchange", onLockChange);
-  }, [started]);
+  }, [started, isMobile]);
+
+  // Mobile: interact trigger polling
+  useEffect(() => {
+    if (!isMobile || !started || isPaused) return;
+    const timer = setInterval(() => {
+      if (mobileInput.interactTriggered) {
+        mobileInput.interactTriggered = false;
+        if (focusedTool) {
+          router.push("/waitlist");
+        }
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [isMobile, started, isPaused, focusedTool, router]);
 
   // E tusuyla interact -> bekleme listesine yonlendir
   useEffect(() => {
@@ -110,23 +133,27 @@ export default function Showroom() {
     return () => window.removeEventListener("mousedown", onClick);
   }, [started, isPaused, focusedTool, router]);
 
-  // Intro click handler - user gesture scope'unda pointer lock tetikle
+  // Intro click handler
   const handleStart = () => {
-    // Once lock cagir (user gesture icinde), sonra state guncelle
-    try {
-      pointerLockRef.current?.lock();
-    } catch {
-      /* noop */
+    // Desktop: pointer lock; mobile: skip
+    if (!isMobile) {
+      try {
+        pointerLockRef.current?.lock();
+      } catch {
+        /* noop */
+      }
     }
     setStarted(true);
     setIsPaused(false);
   };
 
   const handleResume = () => {
-    try {
-      pointerLockRef.current?.lock();
-    } catch {
-      /* noop */
+    if (!isMobile) {
+      try {
+        pointerLockRef.current?.lock();
+      } catch {
+        /* noop */
+      }
     }
     setIsPaused(false);
   };
@@ -173,7 +200,7 @@ export default function Showroom() {
 
           <Suspense fallback={null}>
             <DoomScene standRefs={standRefs} />
-            <FPSController enabled={started && !isPaused} />
+            <FPSController enabled={started && !isPaused} isMobile={isMobile} />
             {started && !isPaused && (
               <>
                 <InteractionRaycaster
@@ -185,12 +212,14 @@ export default function Showroom() {
             )}
           </Suspense>
 
-          {/* PointerLockControls her zaman mount - ref ile kontrol edilir */}
-          <PointerLockControls
-            ref={(ref) => {
-              pointerLockRef.current = ref as PointerLockControlsRef | null;
-            }}
-          />
+          {/* PointerLockControls sadece desktop */}
+          {!isMobile && (
+            <PointerLockControls
+              ref={(ref) => {
+                pointerLockRef.current = ref as PointerLockControlsRef | null;
+              }}
+            />
+          )}
 
           <EffectComposer>
             <Bloom
@@ -207,8 +236,18 @@ export default function Showroom() {
       {/* UI Overlay */}
       <AmbientSound started={started} />
       {!started && <IntroScreen onStart={handleStart} />}
-      {started && !isPaused && <HudHint />}
+      {started && !isPaused && !isMobile && <HudHint />}
       {started && !isPaused && <Crosshair focusedTool={focusedTool} />}
+      {started && !isPaused && isMobile && (
+        <MobileControls
+          onAttack={() => {
+            setAttackTrigger((prev) => prev + 1);
+            if (focusedTool) {
+              setTimeout(() => router.push("/waitlist"), 250);
+            }
+          }}
+        />
+      )}
       {started && isPaused && (
         <PauseMenu onResume={handleResume} onExit={handleExit} />
       )}
