@@ -171,6 +171,42 @@ body {
   animation: float 3s ease-in-out infinite;
 }
 
+/* ===== GAME INTRO UTILITIES ===== */
+@keyframes press-start-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.2; }
+}
+
+@utility animate-press-blink {
+  animation: press-start-blink 1.2s steps(1) infinite;
+}
+
+@keyframes crt-scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 4px; }
+}
+
+@utility scanlines {
+  background-image: linear-gradient(
+    transparent 50%,
+    rgba(0, 0, 0, 0.35) 50%
+  );
+  background-size: 100% 4px;
+  animation: crt-scanlines 8s linear infinite;
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  43% { opacity: 0.92; }
+  45% { opacity: 1; }
+  88% { opacity: 0.95; }
+  90% { opacity: 1; }
+}
+
+@utility animate-crt-flicker {
+  animation: crt-flicker 4s linear infinite;
+}
+
 /* ===== PLUS X TARZI PREMIUM UTILITIES ===== */
 
 /* Devasa display tipografi */
