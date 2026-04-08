@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { Resend } from "resend";
 
 const NOTIFY_EMAIL = "aytekinbirkon@gmail.com";
@@ -103,9 +103,9 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // Supabase varsa veritabanina kaydet
+    // Supabase varsa veritabanina kaydet (service role - RLS bypass)
     try {
-      const supabase = await createClient();
+      const supabase = createServiceClient();
       const { error } = await supabase
         .from("waitlist")
         .insert({ email: cleanEmail });

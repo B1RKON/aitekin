@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import ytdl from "@distube/ytdl-core";
+import { isApprovedUser, NOT_APPROVED_RESPONSE } from "@/lib/userAuth";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
+    // Auth gate
+    const { approved } = await isApprovedUser();
+    if (!approved) {
+      return NextResponse.json(NOT_APPROVED_RESPONSE, { status: 403 });
+    }
+
     const { searchParams } = req.nextUrl;
     const url = searchParams.get("url");
     const itag = searchParams.get("itag");

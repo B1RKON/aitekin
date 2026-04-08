@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminRequest } from "@/lib/adminAuth";
 
 /**
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "E-posta gerekli" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const { error } = await supabase
       .from("waitlist")
       .update({ status: "rejected" })

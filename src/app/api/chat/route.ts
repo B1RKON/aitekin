@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkDailyLimit } from "@/lib/rate-limiter";
+import { isApprovedUser, NOT_APPROVED_RESPONSE } from "@/lib/userAuth";
 
 const DAILY_CHAT_LIMIT = 10000;
 
@@ -11,6 +12,12 @@ const CF_MODELS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth gate: sadece onayli kullanicilar
+    const { approved } = await isApprovedUser();
+    if (!approved) {
+      return NextResponse.json(NOT_APPROVED_RESPONSE, { status: 403 });
+    }
+
     const { allowed } = checkDailyLimit("chat", DAILY_CHAT_LIMIT);
     if (!allowed) {
       return NextResponse.json(

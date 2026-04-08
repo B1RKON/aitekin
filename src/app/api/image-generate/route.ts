@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkDailyLimit } from "@/lib/rate-limiter";
+import { isApprovedUser, NOT_APPROVED_RESPONSE } from "@/lib/userAuth";
 
 // Gunluk limit: 500 gorsel (Cloudflare free tier cok yuksek ama guvenlik marji)
 const DAILY_IMAGE_LIMIT = 500;
@@ -11,6 +12,12 @@ const models: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth gate
+    const { approved } = await isApprovedUser();
+    if (!approved) {
+      return NextResponse.json(NOT_APPROVED_RESPONSE, { status: 403 });
+    }
+
     const { allowed, remaining } = checkDailyLimit("image-generate", DAILY_IMAGE_LIMIT);
     if (!allowed) {
       return NextResponse.json(

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-export const runtime = "edge";
+import { isApprovedUser, NOT_APPROVED_RESPONSE } from "@/lib/userAuth";
 
 const COBALT_INSTANCES = [
   "https://api.cobalt.tools",
@@ -10,6 +9,12 @@ const COBALT_INSTANCES = [
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth gate
+    const { approved } = await isApprovedUser();
+    if (!approved) {
+      return NextResponse.json(NOT_APPROVED_RESPONSE, { status: 403 });
+    }
+
     const body = await req.json();
     const { url, videoQuality, downloadMode, audioFormat, audioBitrate } = body;
 

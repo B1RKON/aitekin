@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkDailyLimit } from "@/lib/rate-limiter";
+import { isApprovedUser, NOT_APPROVED_RESPONSE } from "@/lib/userAuth";
 
 const DAILY_MUSIC_LIMIT = 200;
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth gate
+    const { approved } = await isApprovedUser();
+    if (!approved) {
+      return NextResponse.json(NOT_APPROVED_RESPONSE, { status: 403 });
+    }
+
     const { allowed } = checkDailyLimit("music-generate", DAILY_MUSIC_LIMIT);
     if (!allowed) {
       return NextResponse.json(

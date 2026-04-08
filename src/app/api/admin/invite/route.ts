@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { Resend } from "resend";
 import { randomUUID } from "crypto";
 import { isAdminRequest } from "@/lib/adminAuth";
@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "E-posta gerekli" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    // Service role: RLS bypass (yetki zaten kontrol edildi)
+    const supabase = createServiceClient();
     const token = randomUUID();
 
     const { error } = await supabase
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const { data, error } = await supabase
       .from("waitlist")
       .select("*")
