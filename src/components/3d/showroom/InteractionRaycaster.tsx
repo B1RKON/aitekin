@@ -25,12 +25,17 @@ export default function InteractionRaycaster({
   }, []);
 
   useFrame(() => {
-    // Ekran merkezinden forward raycast
-    raycaster.current.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-    // En yakin stand'i bul (sadece distance kontrolu)
+    // En yakin stand'i bul - XZ duzleminde (Y farkini ignore et)
     let closestTool: ShowroomTool | null = null;
     let closestDist = MAX_INTERACT_DISTANCE;
+
+    // Player'in XZ pozisyonu ve forward yonu
+    const cameraXZ = new THREE.Vector3(camera.position.x, 0, camera.position.z);
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < 0.0001) return;
+    forward.normalize();
 
     for (const tool of SHOWROOM_TOOLS) {
       const stand = standRefs.current.get(tool.id);
@@ -38,19 +43,19 @@ export default function InteractionRaycaster({
 
       const standPos = new THREE.Vector3();
       stand.getWorldPosition(standPos);
+      const standXZ = new THREE.Vector3(standPos.x, 0, standPos.z);
 
-      // Yalnizca stand'in merkezi ile kamera arasinda mesafe kontrol
-      const dist = camera.position.distanceTo(standPos);
-      if (dist > MAX_INTERACT_DISTANCE) continue;
+      const dist = cameraXZ.distanceTo(standXZ);
+      if (dist > MAX_INTERACT_DISTANCE || dist > closestDist) continue;
 
-      // Kamera stand'e bakiyor mu kontrolu (dot product)
-      const toStand = standPos.clone().sub(camera.position).normalize();
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
+      const toStand = standXZ.clone().sub(cameraXZ);
+      if (toStand.lengthSq() < 0.0001) continue;
+      toStand.normalize();
       const dot = forward.dot(toStand);
 
-      // 60 derecelik view cone icinde mi
-      if (dot > 0.6 && dist < closestDist) {
+      // Cok yakin (1.5m) ise dot kontrolu olmadan kabul et
+      // Daha uzakta ise 90 derece view cone (dot > 0.5)
+      if (dist < 1.5 || dot > 0.5) {
         closestDist = dist;
         closestTool = tool;
       }
