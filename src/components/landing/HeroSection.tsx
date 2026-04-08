@@ -1,95 +1,124 @@
 "use client";
 
-import TypingEffect from "./TypingEffect";
-import TerminalCard from "@/components/ui/TerminalCard";
-import NeonButton from "@/components/ui/NeonButton";
 import Link from "next/link";
-
-const typingTexts = [
-  "Video dönüştür...",
-  "Müzik üret...",
-  "PDF analiz et...",
-  "Kod yaz...",
-  "Görüntü işle...",
-  "Ödev çöz...",
-];
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/lib/gsap";
+import MagneticButton from "@/components/animations/MagneticButton";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 export default function HeroSection() {
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!heroRef.current) return;
+
+    const tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+
+    tl.from(".hero-label", { opacity: 0, y: 20, duration: 0.8, delay: 0.2 })
+      .from(
+        ".hero-line",
+        { opacity: 0, yPercent: 100, duration: 1.2, stagger: 0.1 },
+        "-=0.4"
+      )
+      .from(
+        ".hero-sub",
+        { opacity: 0, y: 30, duration: 1 },
+        "-=0.6"
+      )
+      .from(
+        ".hero-cta",
+        { opacity: 0, y: 20, duration: 0.8, stagger: 0.1 },
+        "-=0.6"
+      )
+      .from(
+        ".hero-orb",
+        { opacity: 0, scale: 0.5, duration: 1.5, stagger: 0.2 },
+        "-=1"
+      );
+  }, []);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-xs">
-                <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
-                {"100% Ücretsiz & Açık Kaynak"}
-              </div>
+    <section
+      ref={heroRef}
+      className="relative min-h-screen flex flex-col justify-center px-6 lg:px-12 pt-32 pb-20 overflow-hidden"
+    >
+      {/* Decorative neon orbs */}
+      <div className="hero-orb absolute top-1/4 right-[10%] w-[400px] h-[400px] neon-ring animate-float-slow pointer-events-none" />
+      <div className="hero-orb absolute bottom-[10%] left-[5%] w-[300px] h-[300px] neon-ring-purple animate-float-slow pointer-events-none" style={{ animationDelay: "2s" }} />
+      <div className="hero-orb absolute top-[15%] left-[40%] w-[200px] h-[200px] neon-ring animate-float-slow pointer-events-none" style={{ animationDelay: "4s" }} />
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-                <span className="text-text-primary">{"Yapay Zekayı"}</span>
-                <br />
-                <span className="text-neon-cyan text-glow-cyan">{"Ücretsiz"}</span>{" "}
-                <span className="text-text-primary">{"Kullan"}</span>
-              </h1>
+      <div className="relative z-10 max-w-[1600px] mx-auto w-full">
+        {/* Section label */}
+        <div className="hero-label mb-12">
+          <SectionHeader number="00 /" label="AI PLATFORM" />
+        </div>
 
-              <p className="text-text-secondary text-lg max-w-xl leading-relaxed">
-                {"Video, ses, müzik, görüntü işleme, PDF analizi ve AI sohbet araçlarına ücretsiz eriş. Tüm işlemler tarayıcında çalışır, veriler sende kalır."}
-              </p>
+        {/* Massive display headline */}
+        <h1 className="text-display font-bold leading-[0.85] tracking-tighter">
+          <span className="block overflow-hidden">
+            <span className="hero-line block text-text-primary">YAPAY</span>
+          </span>
+          <span className="block overflow-hidden">
+            <span className="hero-line block text-text-primary">
+              ZEKAYI{" "}
+              <span className="text-neon-cyan italic font-serif">ucretsiz</span>
+            </span>
+          </span>
+          <span className="block overflow-hidden">
+            <span className="hero-line block text-text-primary">KULLAN.</span>
+          </span>
+        </h1>
+
+        {/* Subtitle + CTAs */}
+        <div className="mt-16 grid lg:grid-cols-2 gap-12 items-end">
+          <p className="hero-sub text-text-secondary text-lg lg:text-xl max-w-xl leading-relaxed">
+            Video, ses, muzik, gorsel uretimi, PDF analizi ve AI sohbet
+            araclarinin tamami tek platformda. Sinirsiz, ucretsiz, herkes icin.
+          </p>
+
+          <div className="flex flex-wrap gap-6 lg:justify-end">
+            <div className="hero-cta">
+              <MagneticButton>
+                <Link
+                  href="/waitlist"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-neon-cyan text-black font-bold tracking-wide hover-lift glow-soft"
+                >
+                  BEKLEME LISTESINE KATIL
+                  <span className="text-xl">&rarr;</span>
+                </Link>
+              </MagneticButton>
             </div>
-
-            <div className="flex flex-wrap gap-4">
-              <Link href="/waitlist">
-                <NeonButton color="cyan" size="lg">
-                  {">"} {"Bekleme Listesine Katıl"}
-                </NeonButton>
-              </Link>
-              <Link href="#tools">
-                <NeonButton color="green" size="lg" variant="outline">
-                  {"Araçları Keşfet"}
-                </NeonButton>
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-6 text-text-secondary text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-neon-green">&#10003;</span> {"Kayıt ol, hemen kullan"}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-neon-green">&#10003;</span> {"Sunucuya veri gitmez"}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-neon-green">&#10003;</span> {"Sınırsız kullanım"}
-              </div>
+            <div className="hero-cta">
+              <MagneticButton>
+                <Link
+                  href="#tools"
+                  className="inline-flex items-center gap-3 px-8 py-4 border border-text-secondary/30 text-text-primary tracking-wide hover:border-neon-cyan transition-colors hover-lift"
+                >
+                  ARACLARI KESFET
+                </Link>
+              </MagneticButton>
             </div>
           </div>
+        </div>
 
-          <div className="hidden lg:block">
-            <TerminalCard title="ai-engine" className="shadow-2xl shadow-neon-cyan/5">
-              <div className="space-y-2 text-sm">
-                <p>
-                  <span className="text-neon-green">$</span>{" "}
-                  <span className="text-neon-cyan">aitekin</span> --init
-                </p>
-                <p className="text-text-secondary">
-                  {"[OK] Platform başlatıldı..."}
-                </p>
-                <p className="text-text-secondary">
-                  {"[OK] AI modülleri yüklendi"}
-                </p>
-                <p className="text-text-secondary">
-                  {"[OK] WebGPU aktif"}
-                </p>
-                <p>
-                  <span className="text-neon-green">$</span>{" "}
-                  <TypingEffect
-                    texts={typingTexts}
-                    className="text-neon-yellow"
-                    speed={60}
-                  />
-                </p>
-              </div>
-            </TerminalCard>
+        {/* Bottom info bar */}
+        <div className="hero-cta mt-24 pt-8 border-t border-text-secondary/10 grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div>
+            <div className="text-neon-cyan text-3xl font-bold">14+</div>
+            <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">AI Araci</div>
+          </div>
+          <div>
+            <div className="text-neon-green text-3xl font-bold">100%</div>
+            <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">Ucretsiz</div>
+          </div>
+          <div>
+            <div className="text-neon-purple text-3xl font-bold">0</div>
+            <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">Reklam</div>
+          </div>
+          <div>
+            <div className="text-neon-pink text-3xl font-bold">&infin;</div>
+            <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">Sinirsiz</div>
           </div>
         </div>
       </div>

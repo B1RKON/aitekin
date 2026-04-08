@@ -3,10 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Loader2, CheckCircle, Rocket, ArrowLeft, Mail } from "lucide-react";
-import NeonButton from "@/components/ui/NeonButton";
-import TerminalCard from "@/components/ui/TerminalCard";
-import CodeRain from "@/components/landing/CodeRain";
+import { Loader2, CheckCircle, Mail, ArrowRight } from "lucide-react";
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState("");
@@ -28,7 +25,7 @@ export default function WaitlistPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || "Bir hata oluştu");
+        setErrorMsg(data.error || "Bir hata olustu");
         setStatus("error");
         return;
       }
@@ -39,108 +36,149 @@ export default function WaitlistPage() {
         setStatus("success");
       }
     } catch {
-      setErrorMsg("Bağlantı hatası, lütfen tekrar dene");
+      setErrorMsg("Baglanti hatasi, lutfen tekrar dene");
       setStatus("error");
     }
   }
 
   return (
-    <>
-      <CodeRain />
-      <div className="relative z-10 min-h-screen bg-base-100/80 flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-2 mb-6">
-              <Image src="/logo.png" alt="aitekin" width={36} height={36} />
-              <span className="text-xl font-bold">
-                <span className="text-neon-cyan">ai</span>
-                <span className="text-text-primary">tekin</span>
-                <span className="text-neon-green">.com</span>
-              </span>
-            </Link>
-            <h1 className="text-2xl font-bold text-text-primary">{"Yakında Yayında!"}</h1>
-            <p className="text-text-secondary text-sm mt-2 leading-relaxed max-w-sm mx-auto">
-              {"Tüm AI araçlarına ücretsiz erişim. Bekleme listesine katıl, yayına alındığında ilk sen haberi al."}
-            </p>
+    <div className="min-h-screen bg-base-100 flex flex-col lg:flex-row">
+      {/* Left side - Big typography */}
+      <div className="lg:w-1/2 relative flex items-center justify-center p-8 lg:p-16 overflow-hidden">
+        {/* Decorative orbs */}
+        <div className="absolute top-[20%] left-[10%] w-[400px] h-[400px] neon-ring animate-float-slow pointer-events-none" />
+        <div className="absolute bottom-[15%] right-[10%] w-[300px] h-[300px] neon-ring-purple animate-float-slow pointer-events-none" style={{ animationDelay: "2s" }} />
+
+        <div className="relative z-10 max-w-xl">
+          <Link href="/" className="inline-flex items-center gap-3 mb-12">
+            <Image src="/logo.png" alt="aitekin" width={36} height={36} />
+            <span className="text-base font-bold tracking-tight">
+              <span className="text-neon-cyan">ai</span>
+              <span className="text-text-primary">tekin</span>
+              <span className="text-neon-green">.com</span>
+            </span>
+          </Link>
+
+          <div className="text-text-secondary text-xs uppercase tracking-[0.3em] mb-6">
+            00 / Yakinda Yayinda
           </div>
 
+          <h1 className="text-display-sm font-bold leading-[0.9] tracking-tighter mb-8">
+            Erken{" "}
+            <span className="text-neon-cyan italic font-serif">erisim.</span>
+          </h1>
+
+          <p className="text-text-secondary text-base lg:text-lg leading-relaxed max-w-md">
+            14 ucretsiz AI araci, sinirsiz kullanim. Bekleme listesine katil, yayina alindiginda ilk sen haber al.
+          </p>
+
+          {/* Stats */}
+          <div className="mt-12 grid grid-cols-3 gap-6">
+            <div>
+              <div className="text-neon-cyan text-3xl font-bold">14+</div>
+              <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">Arac</div>
+            </div>
+            <div>
+              <div className="text-neon-green text-3xl font-bold">100%</div>
+              <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">Free</div>
+            </div>
+            <div>
+              <div className="text-neon-purple text-3xl font-bold">0</div>
+              <div className="text-text-secondary text-xs uppercase tracking-widest mt-1">Reklam</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right side - Form */}
+      <div className="lg:w-1/2 bg-base-200/30 flex items-center justify-center p-8 lg:p-16 border-l border-text-secondary/10">
+        <div className="w-full max-w-md">
           {status === "success" || status === "already" ? (
-            <TerminalCard title="waitlist/success">
-              <div className="text-center py-6">
-                <div className="inline-flex p-4 rounded-full bg-neon-green/10 mb-4">
-                  <CheckCircle className="text-neon-green" size={32} />
-                </div>
-                <h2 className="text-lg font-bold text-neon-green mb-2">
-                  {status === "already" ? "Zaten Listedesin!" : "Listeye Eklendi!"}
-                </h2>
-                <p className="text-text-secondary text-sm mb-6">
-                  {status === "already"
-                    ? "Bu e-posta adresi zaten bekleme listemizde. Yayına alındığında sana haber vereceğiz."
-                    : "Bekleme listesine başarıyla katıldın. Yayına alındığında e-posta ile bilgilendireceğiz."}
-                </p>
-                <Link href="/">
-                  <NeonButton color="cyan" size="sm">
-                    <ArrowLeft size={14} className="mr-2" />
-                    {"Ana Sayfaya Dön"}
-                  </NeonButton>
-                </Link>
+            <div className="text-center">
+              <div className="inline-flex p-5 rounded-full bg-neon-green/10 mb-6">
+                <CheckCircle className="text-neon-green" size={40} />
               </div>
-            </TerminalCard>
-          ) : (
-            <TerminalCard title="waitlist/join">
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                {status === "error" && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2 text-red-400 text-xs font-mono">
-                    {errorMsg}
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-text-secondary text-xs block mb-1">{"E-posta Adresin"}</label>
-                  <input
-                    type="email"
-                    placeholder="ornek@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full bg-base-100 border border-base-300 rounded-lg px-4 py-3 text-sm
-                      text-text-primary placeholder:text-text-secondary/50 font-mono
-                      focus:outline-none focus:border-neon-cyan focus:shadow-[0_0_10px_rgba(0,255,229,0.2)]
-                      transition-all"
-                  />
-                </div>
-
-                <NeonButton color="cyan" className="w-full" type="submit" disabled={status === "loading"}>
-                  {status === "loading" ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 size={16} className="animate-spin" />
-                      {"Kaydediliyor..."}
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Mail size={16} />
-                      {"Bekleme Listesine Katıl"}
-                    </span>
-                  )}
-                </NeonButton>
-              </form>
-
-              <div className="mt-6 pt-4 border-t border-base-300">
-                <div className="flex items-center gap-3 text-text-secondary text-xs">
-                  <Rocket size={14} className="text-neon-cyan shrink-0" />
-                  <span>{"Video, ses, müzik, görsel, PDF, AI sohbet ve 15+ araç tamamen ücretsiz olacak."}</span>
-                </div>
+              <div className="text-text-secondary text-xs uppercase tracking-[0.3em] mb-4">
+                {status === "already" ? "Zaten Listedesin" : "Basarili"}
               </div>
-
-              <p className="text-center text-text-secondary text-xs mt-4">
-                <Link href="/" className="text-neon-cyan hover:underline">
-                  {"Ana Sayfaya Dön"}
-                </Link>
+              <h2 className="text-4xl font-bold tracking-tighter mb-4 text-text-primary">
+                {status === "already" ? "Zaten" : "Listeye"}{" "}
+                <span className="text-neon-green italic font-serif">eklendin.</span>
+              </h2>
+              <p className="text-text-secondary text-base mb-8 leading-relaxed">
+                {status === "already"
+                  ? "Bu e-posta adresi bekleme listemizde. Yayina alindiginda sana haber verecegiz."
+                  : "Bekleme listesine basariyla katildin. Yayina alindiginda e-posta ile bilgilendirecegiz."}
               </p>
-            </TerminalCard>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-3 px-8 py-4 border border-text-secondary/30 text-text-primary tracking-wide hover:border-neon-cyan transition-colors"
+              >
+                ANA SAYFAYA DON
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="text-text-secondary text-xs uppercase tracking-[0.3em] mb-4">
+                01 / Kayit Formu
+              </div>
+              <h2 className="text-4xl font-bold tracking-tighter mb-8 text-text-primary">
+                Bekleme{" "}
+                <span className="text-neon-cyan italic font-serif">listesi.</span>
+              </h2>
+
+              {status === "error" && (
+                <div className="mb-6 px-4 py-3 border border-red-500/30 bg-red-500/5 text-red-400 text-sm">
+                  {errorMsg}
+                </div>
+              )}
+
+              <div className="mb-8">
+                <label className="text-text-secondary text-xs uppercase tracking-[0.2em] block mb-3">
+                  E-Posta Adresin
+                </label>
+                <input
+                  type="email"
+                  placeholder="ornek@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-transparent border-b-2 border-text-secondary/30 px-0 py-3 text-lg
+                    text-text-primary placeholder:text-text-secondary/40 font-mono
+                    focus:outline-none focus:border-neon-cyan transition-colors"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={status === "loading"}
+                className="w-full inline-flex items-center justify-center gap-3 px-8 py-5 bg-neon-cyan text-black font-bold tracking-wide hover:glow-soft transition-all disabled:opacity-50"
+              >
+                {status === "loading" ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    KAYDEDILIYOR...
+                  </>
+                ) : (
+                  <>
+                    <Mail size={18} />
+                    BEKLEME LISTESINE KATIL
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+
+              <Link
+                href="/"
+                className="block mt-6 text-center text-text-secondary text-xs uppercase tracking-[0.2em] hover:text-neon-cyan transition-colors"
+              >
+                &larr; Ana Sayfaya Don
+              </Link>
+            </form>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

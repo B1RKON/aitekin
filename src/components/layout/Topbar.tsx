@@ -34,7 +34,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="h-14 bg-base-200/80 backdrop-blur-xl border-b border-base-300 flex items-center justify-between px-4">
+    <header className="h-16 bg-black/40 backdrop-blur-2xl border-b border-text-secondary/10 flex items-center justify-between px-6 lg:px-8">
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}

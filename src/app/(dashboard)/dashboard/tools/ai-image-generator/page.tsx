@@ -5,6 +5,7 @@ import { Sparkles, Info, Loader2, Download, Trash2, Image as ImageIcon } from "l
 import NeonButton from "@/components/ui/NeonButton";
 import GlowCard from "@/components/ui/GlowCard";
 import TerminalCard from "@/components/ui/TerminalCard";
+import ToolPageHeader from "@/components/ui/ToolPageHeader";
 
 const models = [
   { id: "sdxl", name: "SDXL", desc: "Yuksek kalite", color: "cyan" as const },
@@ -51,15 +52,14 @@ export default function AiImageGeneratorPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-neon-purple">&gt;</span> {"AI Gorsel Uretimi"}
-        </h1>
-        <p className="text-text-secondary text-sm mt-1">
-          {"Metin yazarak gorseller uretin. SDXL ve FLUX modelleri ile sinir tanimayan yaraticilik."}
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <ToolPageHeader
+        number="05 /"
+        category="AI Gorsel"
+        title="Hayalini"
+        highlight="resmet."
+        description="SDXL ve FLUX modelleri ile metinden gorseller uret. Sinirsiz, ucretsiz, yuksek kalite."
+      />
 
       <GlowCard color="purple" className="!p-4">
         <div className="flex items-start gap-3">

@@ -10,83 +10,124 @@ import {
   Mic,
   FileType,
   Download,
-  ArrowRight,
+  Sparkles,
+  ZoomIn,
+  Paintbrush,
+  Eraser,
+  Film,
   Zap,
   Clock,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import GlowCard from "@/components/ui/GlowCard";
+import ScrollReveal from "@/components/animations/ScrollReveal";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 const quickTools = [
-  { icon: Video, label: "Video Dönüştür", href: "/dashboard/tools/video-converter", color: "cyan" as const },
-  { icon: Mic, label: "Ses Dönüştür", href: "/dashboard/tools/audio-converter", color: "cyan" as const },
-  { icon: Music, label: "Müzik Üret", href: "/dashboard/tools/music-generator", color: "purple" as const },
-  { icon: Image, label: "Görüntü İşle", href: "/dashboard/tools/image-tools", color: "purple" as const },
-  { icon: FileText, label: "PDF Analiz", href: "/dashboard/tools/pdf-chat", color: "green" as const },
-  { icon: MessageSquare, label: "AI Sohbet", href: "/dashboard/tools/ai-chat", color: "pink" as const },
-  { icon: Calculator, label: "Matematik Çöz", href: "/dashboard/tools/ocr-solver", color: "green" as const },
-  { icon: FileType, label: "Metin Özetle", href: "/dashboard/tools/text-summarizer", color: "pink" as const },
-  { icon: Download, label: "Video İndir", href: "/dashboard/tools/video-downloader", color: "green" as const },
+  { icon: Video, label: "Video Donustur", href: "/dashboard/tools/video-converter", color: "cyan" },
+  { icon: Mic, label: "Ses Donustur", href: "/dashboard/tools/audio-converter", color: "cyan" },
+  { icon: Music, label: "Muzik Uret", href: "/dashboard/tools/music-generator", color: "purple" },
+  { icon: Image, label: "Goruntu Isle", href: "/dashboard/tools/image-tools", color: "purple" },
+  { icon: Sparkles, label: "AI Gorsel", href: "/dashboard/tools/ai-image-generator", color: "purple" },
+  { icon: ZoomIn, label: "Gorsel Buyut", href: "/dashboard/tools/image-upscaler", color: "cyan" },
+  { icon: Paintbrush, label: "Foto Onar", href: "/dashboard/tools/photo-restore", color: "green" },
+  { icon: Eraser, label: "Arka Plan", href: "/dashboard/tools/object-remover", color: "pink" },
+  { icon: FileText, label: "PDF Sohbet", href: "/dashboard/tools/pdf-chat", color: "green" },
+  { icon: MessageSquare, label: "AI Sohbet", href: "/dashboard/tools/ai-chat", color: "pink" },
+  { icon: Calculator, label: "OCR Cozucu", href: "/dashboard/tools/ocr-solver", color: "green" },
+  { icon: FileType, label: "Metin Ozet", href: "/dashboard/tools/text-summarizer", color: "pink" },
+  { icon: Film, label: "Video Olustur", href: "/dashboard/tools/video-generator", color: "pink" },
+  { icon: Download, label: "Video Indir", href: "/dashboard/tools/video-downloader", color: "green" },
 ];
 
-const iconColors = {
-  cyan: "text-neon-cyan bg-neon-cyan/10",
-  green: "text-neon-green bg-neon-green/10",
-  purple: "text-neon-purple bg-neon-purple/10",
-  pink: "text-neon-pink bg-neon-pink/10",
+const iconColors: Record<string, string> = {
+  cyan: "text-neon-cyan",
+  green: "text-neon-green",
+  purple: "text-neon-purple",
+  pink: "text-neon-pink",
 };
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-neon-green">$</span> {"Komuta Merkezi"}
+    <div className="max-w-[1400px] mx-auto px-2 lg:px-6 py-6 lg:py-12">
+      {/* Header */}
+      <ScrollReveal>
+        <SectionHeader number="00 /" label="Komuta Merkezi" className="mb-8" />
+      </ScrollReveal>
+
+      <ScrollReveal delay={0.1}>
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter leading-[0.9] mb-4">
+          <span className="text-text-primary">Hos geldin,</span>{" "}
+          <span className="text-neon-cyan italic font-serif">B1RKON</span>
         </h1>
-        <p className="text-text-secondary text-sm mt-1">{"Hoş geldin! Hangi aracı kullanmak istersin?"}</p>
-      </div>
+        <p className="text-text-secondary text-base lg:text-lg max-w-2xl">
+          Hangi aracla baslamak istersin? 14 ucretsiz AI araci seni bekliyor.
+        </p>
+      </ScrollReveal>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <GlowCard color="cyan" className="!p-4 text-center">
-          <Zap className="text-neon-cyan mx-auto mb-2" size={20} />
-          <p className="text-text-primary font-bold text-lg">15</p>
-          <p className="text-text-secondary text-xs">{"Toplam XP"}</p>
-        </GlowCard>
-        <GlowCard color="green" className="!p-4 text-center">
-          <Clock className="text-neon-green mx-auto mb-2" size={20} />
-          <p className="text-text-primary font-bold text-lg">0</p>
-          <p className="text-text-secondary text-xs">{"İşlem Sayısı"}</p>
-        </GlowCard>
-        <GlowCard color="purple" className="!p-4 text-center">
-          <TrendingUp className="text-neon-purple mx-auto mb-2" size={20} />
-          <p className="text-text-primary font-bold text-lg">0</p>
-          <p className="text-text-secondary text-xs">{"Gün Serisi"}</p>
-        </GlowCard>
-      </div>
+      {/* Stats - Plus X numerated cards */}
+      <ScrollReveal delay={0.2}>
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-px bg-text-secondary/10 border border-text-secondary/10">
+          <div className="bg-base-100 p-8 lg:p-10 hover:bg-base-200/50 transition-colors group">
+            <div className="flex items-start justify-between mb-6">
+              <span className="text-text-secondary text-xs uppercase tracking-[0.2em]">01 / XP</span>
+              <Zap className="text-neon-cyan group-hover:scale-110 transition-transform" size={24} />
+            </div>
+            <div className="text-5xl lg:text-6xl font-bold text-text-primary tracking-tighter mb-2">15</div>
+            <p className="text-text-secondary text-xs uppercase tracking-widest">Toplam Puan</p>
+          </div>
 
-      <div>
-        <h2 className="text-lg font-bold text-text-primary mb-4">
-          <span className="text-neon-cyan">&gt;</span> {"Hızlı Erişim"}
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {quickTools.map((tool) => (
-            <Link key={tool.href} href={tool.href}>
-              <GlowCard color={tool.color} className="!p-4 group cursor-pointer">
-                <div className="flex flex-col items-center gap-3 text-center">
-                  <div className={`p-2.5 rounded-lg ${iconColors[tool.color]} group-hover:scale-110 transition-transform`}>
-                    <tool.icon size={20} />
-                  </div>
-                  <span className="text-text-primary text-xs font-medium">{tool.label}</span>
-                  <ArrowRight
-                    size={14}
-                    className="text-text-secondary group-hover:text-neon-cyan group-hover:translate-x-1 transition-all"
+          <div className="bg-base-100 p-8 lg:p-10 hover:bg-base-200/50 transition-colors group">
+            <div className="flex items-start justify-between mb-6">
+              <span className="text-text-secondary text-xs uppercase tracking-[0.2em]">02 / OPS</span>
+              <Clock className="text-neon-green group-hover:scale-110 transition-transform" size={24} />
+            </div>
+            <div className="text-5xl lg:text-6xl font-bold text-text-primary tracking-tighter mb-2">0</div>
+            <p className="text-text-secondary text-xs uppercase tracking-widest">Islem Sayisi</p>
+          </div>
+
+          <div className="bg-base-100 p-8 lg:p-10 hover:bg-base-200/50 transition-colors group">
+            <div className="flex items-start justify-between mb-6">
+              <span className="text-text-secondary text-xs uppercase tracking-[0.2em]">03 / STREAK</span>
+              <TrendingUp className="text-neon-purple group-hover:scale-110 transition-transform" size={24} />
+            </div>
+            <div className="text-5xl lg:text-6xl font-bold text-text-primary tracking-tighter mb-2">0</div>
+            <p className="text-text-secondary text-xs uppercase tracking-widest">Gun Serisi</p>
+          </div>
+        </div>
+      </ScrollReveal>
+
+      {/* Tools Grid */}
+      <ScrollReveal delay={0.1}>
+        <div className="mt-20 mb-8">
+          <SectionHeader number="01 /" label="Hizli Erisim" />
+        </div>
+      </ScrollReveal>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-text-secondary/10 border border-text-secondary/10">
+        {quickTools.map((tool, i) => (
+          <ScrollReveal key={tool.href} delay={i * 0.03} y={20}>
+            <Link href={tool.href}>
+              <div className="bg-base-100 p-6 lg:p-8 group hover:bg-base-200/50 transition-all cursor-pointer h-full">
+                <div className="flex items-start justify-between mb-6">
+                  <span className="text-text-secondary text-xs font-mono">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <tool.icon
+                    className={`${iconColors[tool.color]} group-hover:scale-110 transition-transform`}
+                    size={20}
                   />
                 </div>
-              </GlowCard>
+                <h3 className="text-text-primary text-base lg:text-lg font-bold tracking-tight mb-2">
+                  {tool.label}
+                </h3>
+                <span className="text-text-secondary text-xs uppercase tracking-widest group-hover:text-neon-cyan transition-colors">
+                  Ac &rarr;
+                </span>
+              </div>
             </Link>
-          ))}
-        </div>
+          </ScrollReveal>
+        ))}
       </div>
     </div>
   );

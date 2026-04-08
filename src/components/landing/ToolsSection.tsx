@@ -14,157 +14,89 @@ import {
   Paintbrush,
   Eraser,
   Film,
-  ArrowRight,
   Download,
 } from "lucide-react";
 import Link from "next/link";
-import ToolCard from "./ToolCard";
+import ScrollReveal from "@/components/animations/ScrollReveal";
+import SectionHeader from "@/components/ui/SectionHeader";
+import MagneticButton from "@/components/animations/MagneticButton";
 
 const tools = [
-  {
-    icon: Video,
-    title: "Video Dönüştürücü",
-    description: "MP4, WebM, AVI, MOV arasında dönüşüm. Tarayıcında çalışır, dosya yüklemez.",
-    color: "cyan" as const,
-    badge: "WASM",
-    href: "/dashboard/tools/video-converter",
-  },
-  {
-    icon: Music,
-    title: "Müzik Üretici",
-    description: "Metin ile müzik üret. MusicGen ve Stable Audio modelleri ile.",
-    color: "purple" as const,
-    badge: "AI",
-    href: "/dashboard/tools/music-generator",
-  },
-  {
-    icon: FileText,
-    title: "PDF ile Sohbet",
-    description: "PDF'ini yükle, sorular sor, anında yanıtlar al. RAG tabanlı akıllı analiz.",
-    color: "green" as const,
-    badge: "RAG",
-    href: "/dashboard/tools/pdf-chat",
-  },
-  {
-    icon: MessageSquare,
-    title: "AI Sohbet Asistanı",
-    description: "Nemotron ve Trinity modelleriyle ücretsiz sohbet. Kodlama, matematik, ödev yardımı.",
-    color: "pink" as const,
-    badge: "LLM",
-    href: "/dashboard/tools/ai-chat",
-  },
-  {
-    icon: Image,
-    title: "Görüntü İşleme",
-    description: "Arka plan kaldırma, nesne tespiti, görüntü sınıflandırma. WebGPU ile anında.",
-    color: "cyan" as const,
-    badge: "GPU",
-    href: "/dashboard/tools/image-tools",
-  },
-  {
-    icon: Sparkles,
-    title: "AI Görsel Oluşturucu",
-    description: "Metinden görsel oluştur. FLUX, Stable Diffusion 3.5, PixArt-Sigma.",
-    color: "purple" as const,
-    badge: "AI",
-    href: "/dashboard/tools/ai-image-generator",
-  },
-  {
-    icon: Calculator,
-    title: "Matematik Çözücü",
-    description: "Fotoğraf çek, formülü oku, adım adım çöz. OCR + AI destekli.",
-    color: "green" as const,
-    badge: "OCR",
-    href: "/dashboard/tools/ocr-solver",
-  },
-  {
-    icon: Film,
-    title: "Video Oluşturucu",
-    description: "Metinden video üret. LTX-2 Video Turbo, CogVideoX, Wan 2.2.",
-    color: "pink" as const,
-    badge: "AI",
-    href: "/dashboard/tools/video-generator",
-  },
-  {
-    icon: ZoomIn,
-    title: "Görsel Büyütücü",
-    description: "AI ile görselleri 2x-4x büyüt. Kalite kaybı olmadan yüksek çözünürlük.",
-    color: "cyan" as const,
-    badge: "AI",
-    href: "/dashboard/tools/image-upscaler",
-  },
-  {
-    icon: Paintbrush,
-    title: "Fotoğraf Onarıcı",
-    description: "Eski veya hasarlı fotoğrafları AI ile onar. GFPGAN ve CodeFormer.",
-    color: "green" as const,
-    badge: "AI",
-    href: "/dashboard/tools/photo-restore",
-  },
-  {
-    icon: Mic,
-    title: "Ses Dönüştürücü",
-    description: "MP3, WAV, AAC, FLAC, OGG dönüşümü. Videodan ses çıkarma.",
-    color: "purple" as const,
-    badge: "WASM",
-    href: "/dashboard/tools/audio-converter",
-  },
-  {
-    icon: Eraser,
-    title: "Arka Plan Kaldırıcı",
-    description: "Görsellerden arka planı otomatik kaldır. AI destekli hassas kesim.",
-    color: "pink" as const,
-    badge: "AI",
-    href: "/dashboard/tools/object-remover",
-  },
-  {
-    icon: Download,
-    title: "Video İndirici",
-    description: "YouTube, Instagram, TikTok, Twitter ve daha fazlasından video ve ses indir.",
-    color: "green" as const,
-    badge: "API",
-    href: "/dashboard/tools/video-downloader",
-  },
-  {
-    icon: FileType,
-    title: "Metin Özetleme",
-    description: "Uzun makaleleri, ders notlarını anında özetle. Türkçe destekli AI özetleyici.",
-    color: "cyan" as const,
-    badge: "NLP",
-    href: "/dashboard/tools/text-summarizer",
-  },
+  { icon: Video, title: "Video Donusturucu", category: "WASM", href: "/dashboard/tools/video-converter", color: "cyan" },
+  { icon: Music, title: "Muzik Uretici", category: "AI", href: "/dashboard/tools/music-generator", color: "purple" },
+  { icon: FileText, title: "PDF ile Sohbet", category: "RAG", href: "/dashboard/tools/pdf-chat", color: "green" },
+  { icon: MessageSquare, title: "AI Sohbet", category: "LLM", href: "/dashboard/tools/ai-chat", color: "pink" },
+  { icon: Image, title: "Goruntu Isleme", category: "GPU", href: "/dashboard/tools/image-tools", color: "cyan" },
+  { icon: Sparkles, title: "AI Gorsel", category: "AI", href: "/dashboard/tools/ai-image-generator", color: "purple" },
+  { icon: Calculator, title: "Matematik Cozucu", category: "OCR", href: "/dashboard/tools/ocr-solver", color: "green" },
+  { icon: Film, title: "Video Olusturucu", category: "AI", href: "/dashboard/tools/video-generator", color: "pink" },
+  { icon: ZoomIn, title: "Gorsel Buyutucu", category: "AI", href: "/dashboard/tools/image-upscaler", color: "cyan" },
+  { icon: Paintbrush, title: "Fotograf Onarici", category: "AI", href: "/dashboard/tools/photo-restore", color: "green" },
+  { icon: Mic, title: "Ses Donusturucu", category: "WASM", href: "/dashboard/tools/audio-converter", color: "purple" },
+  { icon: Eraser, title: "Arka Plan Kaldirici", category: "AI", href: "/dashboard/tools/object-remover", color: "pink" },
+  { icon: Download, title: "Video Indirici", category: "API", href: "/dashboard/tools/video-downloader", color: "green" },
+  { icon: FileType, title: "Metin Ozetleme", category: "NLP", href: "/dashboard/tools/text-summarizer", color: "cyan" },
 ];
 
 export default function ToolsSection() {
   return (
-    <section id="tools" className="py-24 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            <span className="text-neon-cyan">{">"} </span>
-            <span className="text-text-primary">{"AI Araç Kutun"}</span>
-          </h2>
-          <p className="text-text-secondary max-w-2xl mx-auto">
-            {"Tüm araçlar açık kaynaklı ve ücretsiz. Çoğu tarayıcında çalışır, verilerini hiçbir sunucuya göndermez."}
-          </p>
-        </div>
+    <section id="tools" className="py-32 lg:py-48 px-6 lg:px-12 relative">
+      <div className="max-w-[1600px] mx-auto">
+        <ScrollReveal>
+          <SectionHeader number="01 /" label="Tum Araclar" className="mb-12" />
+        </ScrollReveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-4">
-          {tools.map((tool) => (
-            <ToolCard key={tool.title} {...tool} />
+        <ScrollReveal delay={0.1}>
+          <h2 className="text-display-sm font-bold leading-[0.9] tracking-tighter mb-20 max-w-5xl">
+            14 ucretsiz AI <br />
+            <span className="text-neon-cyan italic font-serif">araci</span>, tek platform.
+          </h2>
+        </ScrollReveal>
+
+        {/* Numbered tools list - Plus X tarzi */}
+        <div className="border-t border-text-secondary/10">
+          {tools.map((tool, i) => (
+            <ScrollReveal key={tool.title} delay={i * 0.03} y={20}>
+              <Link href={tool.href}>
+                <div className="group flex items-center gap-6 lg:gap-12 py-8 lg:py-10 border-b border-text-secondary/10 hover:bg-base-200/50 transition-colors px-4 -mx-4">
+                  <span className="text-text-secondary text-sm font-mono w-12">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+
+                  <div className={`p-3 rounded-lg bg-base-300/50 text-neon-${tool.color} group-hover:scale-110 transition-transform`}>
+                    <tool.icon size={24} />
+                  </div>
+
+                  <h3 className="flex-1 text-2xl lg:text-4xl font-bold tracking-tight text-text-primary group-hover:text-neon-cyan transition-colors">
+                    {tool.title}
+                  </h3>
+
+                  <span className="hidden md:block text-text-secondary text-xs uppercase tracking-[0.2em]">
+                    {tool.category}
+                  </span>
+
+                  <span className="text-2xl text-text-secondary group-hover:text-neon-cyan group-hover:translate-x-2 transition-all">
+                    &rarr;
+                  </span>
+                </div>
+              </Link>
+            </ScrollReveal>
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 rounded-lg
-              text-neon-cyan font-mono text-sm hover:bg-neon-cyan/20 transition-all group"
-          >
-            {"Tüm Araçlara Eriş"}
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
+        <ScrollReveal delay={0.2}>
+          <div className="mt-20 flex justify-center">
+            <MagneticButton>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-3 px-10 py-5 bg-neon-cyan text-black font-bold tracking-wide glow-soft hover-lift"
+              >
+                TUM ARACLARA ERIS
+                <span className="text-xl">&rarr;</span>
+              </Link>
+            </MagneticButton>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

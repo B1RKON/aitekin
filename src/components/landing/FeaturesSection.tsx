@@ -1,61 +1,84 @@
 "use client";
 
 import { Shield, Zap, Globe, Trophy } from "lucide-react";
+import ScrollReveal from "@/components/animations/ScrollReveal";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 const features = [
   {
     icon: Shield,
-    title: "Gizlilik Öncelikli",
-    description: "Dosyaların tarayıcında işlenir. Sunucuya veri gitmez. Tüm işlemler sende kalır.",
-    color: "text-neon-cyan",
+    number: "01",
+    title: "Gizlilik Oncelikli",
+    description:
+      "Dosyalarin tarayicinda islenir. Sunucuya veri gitmez. Tum islemler sende kalir, hicbir izleme yok.",
+    color: "cyan",
   },
   {
     icon: Zap,
-    title: "Sıfır Maliyet",
-    description: "WebAssembly ve WebGPU ile tarayıcı içinde çalışır. Sana ve bize ek maliyet yok.",
-    color: "text-neon-green",
+    number: "02",
+    title: "Sifir Maliyet",
+    description:
+      "WebAssembly ve WebGPU ile tarayici icinde calisir. Sana ve bize ek maliyet yok. Sonsuza dek ucretsiz.",
+    color: "green",
   },
   {
     icon: Globe,
-    title: "Açık Kaynak",
-    description: "Tüm araçlar açık kaynaklı projelerden beslenir. Şeffaf, güvenilir, topluluk destekli.",
-    color: "text-neon-purple",
+    number: "03",
+    title: "Acik Kaynak",
+    description:
+      "Tum araclar acik kaynakli projelerden beslenir. Seffaf, guvenilir, topluluk destekli ve incelenebilir.",
+    color: "purple",
   },
   {
     icon: Trophy,
-    title: "Oyunlaştırılmış",
-    description: "XP kazan, seviye atla, rozet topla. Script Kiddie'den AI Architect'e yüksel.",
-    color: "text-neon-pink",
+    number: "04",
+    title: "Oyunlastirilmis",
+    description:
+      "XP kazan, seviye atla, rozet topla. Script Kiddie'den AI Architect'e yuksel. Ogrenmek eglenceli.",
+    color: "pink",
   },
 ];
 
 export default function FeaturesSection() {
   return (
-    <section id="about" className="py-24 bg-base-200/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            <span className="text-neon-green">{">"} </span>
-            <span className="text-text-primary">{"Neden aitekin?"}</span>
-          </h2>
-        </div>
+    <section id="about" className="py-32 lg:py-48 px-6 lg:px-12 relative">
+      <div className="max-w-[1600px] mx-auto">
+        <ScrollReveal>
+          <SectionHeader number="02 /" label="Manifesto" className="mb-12" />
+        </ScrollReveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="text-center p-6 rounded-xl bg-base-200 border border-base-300
-                hover:border-base-300/80 transition-all duration-300 group"
-            >
-              <div
-                className={`inline-flex p-4 rounded-xl bg-base-300/50 mb-4 ${feature.color}
-                  group-hover:scale-110 transition-transform duration-300`}
-              >
-                <feature.icon size={28} />
+        <ScrollReveal delay={0.1}>
+          <h2 className="text-display-sm font-bold leading-[0.9] tracking-tighter mb-20 max-w-5xl">
+            Neden{" "}
+            <span className="text-neon-green italic font-serif">aitekin?</span>
+          </h2>
+        </ScrollReveal>
+
+        <div className="grid md:grid-cols-2 gap-12 lg:gap-20">
+          {features.map((feature, i) => (
+            <ScrollReveal key={feature.title} delay={i * 0.1} y={40}>
+              <div className="group relative p-8 lg:p-12 border border-text-secondary/10 hover:border-neon-cyan/30 transition-all duration-500 hover-lift">
+                {/* Number */}
+                <div className="absolute top-8 right-8 text-text-secondary/30 text-6xl font-bold font-serif italic group-hover:text-neon-cyan/30 transition-colors">
+                  {feature.number}
+                </div>
+
+                {/* Icon */}
+                <div
+                  className={`inline-flex p-4 rounded-2xl bg-base-300/50 mb-8 text-neon-${feature.color} group-hover:scale-110 transition-transform duration-500`}
+                >
+                  <feature.icon size={32} />
+                </div>
+
+                {/* Content */}
+                <h3 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4 text-text-primary">
+                  {feature.title}
+                </h3>
+                <p className="text-text-secondary text-base lg:text-lg leading-relaxed max-w-md">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="text-text-primary font-bold text-lg mb-2">{feature.title}</h3>
-              <p className="text-text-secondary text-sm leading-relaxed">{feature.description}</p>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>

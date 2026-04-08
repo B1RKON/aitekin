@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Bot, User, Info, Trash2 } from "lucide-react";
 import NeonButton from "@/components/ui/NeonButton";
 import GlowCard from "@/components/ui/GlowCard";
+import ToolPageHeader from "@/components/ui/ToolPageHeader";
 
 interface Message {
   role: "user" | "assistant";
@@ -97,18 +98,17 @@ export default function AiChatPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 flex flex-col h-[calc(100vh-8rem)]">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-neon-pink">&gt;</span> {"AI Sohbet Asistanı"}
-        </h1>
-        <p className="text-text-secondary text-sm mt-1">
-          {"Ücretsiz AI modelleri ile sohbet. Kodlama, matematik, ödev yardımı."}
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-12rem)]">
+      <ToolPageHeader
+        number="04 /"
+        category="AI Sohbet"
+        title="Yapay zeka"
+        highlight="asistanin."
+        description="Llama 3 ve GPT-OSS modelleri ile ucretsiz sohbet. Kodlama, matematik, odev yardimi."
+      />
 
       {/* Model seçimi */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap mb-4">
         {models.map((m) => (
           <button
             key={m.id}
