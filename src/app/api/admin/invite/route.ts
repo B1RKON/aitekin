@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { randomUUID } from "crypto";
+import { isAdminRequest } from "@/lib/adminAuth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, secret } = await req.json();
-
-    if (secret !== process.env.ADMIN_SECRET) {
+    // Yetki kontrolu (session email veya secret)
+    if (!(await isAdminRequest(req))) {
       return NextResponse.json({ error: "Yetkisiz erisim" }, { status: 401 });
     }
+
+    const { email } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "E-posta gerekli" }, { status: 400 });
@@ -44,15 +46,15 @@ export async function POST(req: NextRequest) {
         to: email,
         subject: "aitekin.com'a Davet Edildiniz!",
         html: `
-          <div style="font-family: monospace; background: #000; color: #E4E4E7; padding: 24px; border-radius: 12px;">
-            <h2 style="color: #00FFE5;">aitekin.com'a Davetlisiniz!</h2>
-            <p style="color: #E4E4E7;">Merhaba,</p>
-            <p style="color: #E4E4E7;">aitekin.com platformuna davet edildiniz. Asagidaki linke tiklayarak hesabinizi olusturabilirsiniz:</p>
-            <p style="margin: 20px 0;"><a href="${inviteLink}" style="color: #000; background: #00FFE5; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Kayit Ol</a></p>
-            <p style="color: #71717A; font-size: 12px;">veya bu linki tarayiciniza yapistiriniz:</p>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #E4E4E7; padding: 40px 24px; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #00FFE5; font-size: 28px; margin: 0 0 24px;">aitekin.com'a Davetlisiniz!</h1>
+            <p style="color: #E4E4E7; font-size: 16px; line-height: 1.6;">Merhaba,</p>
+            <p style="color: #E4E4E7; font-size: 16px; line-height: 1.6;">aitekin.com platformuna davet edildiniz. Aşağıdaki linke tıklayarak hesabınızı oluşturabilirsiniz:</p>
+            <p style="margin: 24px 0;"><a href="${inviteLink}" style="color: #000; background: #00FFE5; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Kayıt Ol</a></p>
+            <p style="color: #71717A; font-size: 12px;">veya bu linki tarayıcınıza yapıştırın:</p>
             <p style="color: #00FFE5; font-size: 12px; word-break: break-all;">${inviteLink}</p>
-            <hr style="border-color: #1E1E2E;" />
-            <p style="color: #71717A; font-size: 12px;">aitekin.com davet sistemi</p>
+            <hr style="border-color: #1E1E2E; margin: 24px 0;" />
+            <p style="color: #71717A; font-size: 11px;">© ${new Date().getFullYear()} aitekin.com</p>
           </div>
         `,
       });
@@ -83,10 +85,7 @@ export async function POST(req: NextRequest) {
 
 // Waitlist listesini getir
 export async function GET(req: NextRequest) {
-  // Secret'i header'dan veya query param'dan al (geriye uyumluluk)
-  const secret = req.headers.get("x-admin-secret") || req.nextUrl.searchParams.get("secret");
-
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Yetkisiz erisim" }, { status: 401 });
   }
 
