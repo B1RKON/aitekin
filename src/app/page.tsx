@@ -1,11 +1,5 @@
-import Navbar from "@/components/landing/Navbar";
-import HeroSection from "@/components/landing/HeroSection";
-import ToolsSection from "@/components/landing/ToolsSection";
-import FeaturesSection from "@/components/landing/FeaturesSection";
-import Footer from "@/components/landing/Footer";
-import SceneWrapper from "@/components/3d/SceneWrapper";
-import P5Wrapper from "@/components/3d/P5Wrapper";
 import MaintenancePage from "@/components/MaintenancePage";
+import ShowroomWrapper from "@/components/3d/showroom/ShowroomWrapper";
 
 export default function Home() {
   // Server-side env check: MAINTENANCE_MODE=true ise bakim sayfasi
@@ -15,21 +9,6 @@ export default function Home() {
     return <MaintenancePage />;
   }
 
-  return (
-    <>
-      {/* Layer 0: Three.js 3D sahne */}
-      <SceneWrapper />
-
-      {/* Layer 1: P5.js particle flow field */}
-      <P5Wrapper />
-
-      <main className="relative z-10 bg-transparent text-text-primary">
-        <Navbar />
-        <HeroSection />
-        <ToolsSection />
-        <FeaturesSection />
-        <Footer />
-      </main>
-    </>
-  );
+  // Lokal/production non-maintenance: FPS Showroom
+  return <ShowroomWrapper />;
 }
