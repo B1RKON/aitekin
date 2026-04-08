@@ -40,7 +40,7 @@ const tools = [
 
 export default function ToolsSection() {
   return (
-    <section id="tools" className="py-32 lg:py-48 px-6 lg:px-12 relative">
+    <section id="tools" className="py-32 lg:py-48 px-6 lg:px-12 relative bg-black/80 backdrop-blur-sm">
       <div className="max-w-[1600px] mx-auto">
         <ScrollReveal>
           <SectionHeader number="01 /" label="Tum Araclar" className="mb-12" />

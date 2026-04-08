@@ -5,7 +5,7 @@ import MarqueeText from "@/components/animations/MarqueeText";
 
 export default function Footer() {
   return (
-    <footer className="relative pt-32 pb-12 border-t border-text-secondary/10 overflow-hidden">
+    <footer className="relative pt-32 pb-12 border-t border-text-secondary/10 overflow-hidden bg-black/90 backdrop-blur-sm">
       {/* Marquee */}
       <div className="mb-32">
         <MarqueeText className="text-display font-bold text-text-primary/5 leading-none tracking-tighter">

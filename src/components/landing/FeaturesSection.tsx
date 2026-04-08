@@ -41,7 +41,7 @@ const features = [
 
 export default function FeaturesSection() {
   return (
-    <section id="about" className="py-32 lg:py-48 px-6 lg:px-12 relative">
+    <section id="about" className="py-32 lg:py-48 px-6 lg:px-12 relative bg-black/80 backdrop-blur-sm">
       <div className="max-w-[1600px] mx-auto">
         <ScrollReveal>
           <SectionHeader number="02 /" label="Manifesto" className="mb-12" />

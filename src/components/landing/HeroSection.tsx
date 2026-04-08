@@ -43,11 +43,6 @@ export default function HeroSection() {
       ref={heroRef}
       className="relative min-h-screen flex flex-col justify-center px-6 lg:px-12 pt-32 pb-20 overflow-hidden"
     >
-      {/* Decorative neon orbs */}
-      <div className="hero-orb absolute top-1/4 right-[10%] w-[400px] h-[400px] neon-ring animate-float-slow pointer-events-none" />
-      <div className="hero-orb absolute bottom-[10%] left-[5%] w-[300px] h-[300px] neon-ring-purple animate-float-slow pointer-events-none" style={{ animationDelay: "2s" }} />
-      <div className="hero-orb absolute top-[15%] left-[40%] w-[200px] h-[200px] neon-ring animate-float-slow pointer-events-none" style={{ animationDelay: "4s" }} />
-
       <div className="relative z-10 max-w-[1600px] mx-auto w-full">
         {/* Section label */}
         <div className="hero-label mb-12">
