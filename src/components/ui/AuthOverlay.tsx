@@ -22,9 +22,25 @@ export default function AuthOverlay({ children }: { children: React.ReactNode })
       setIsAuthenticated(true);
       return;
     }
-    supabase.auth.getUser().then((result: { data: { user: unknown | null } }) => {
-      setIsAuthenticated(!!result.data?.user);
-    });
+    // Approved kontrolu (admin veya waitlist'te invited/registered)
+    fetch("/api/auth/approved")
+      .then((r) => r.json())
+      .then(async (data: { approved: boolean; hasSession: boolean }) => {
+        if (data.approved) {
+          setIsAuthenticated(true);
+        } else {
+          // Session var ama approved degil -> sign out (ornegin Google ile baglanmis ama bekleme listesinde)
+          if (data.hasSession) {
+            try {
+              await supabase.auth.signOut();
+            } catch {
+              /* noop */
+            }
+          }
+          setIsAuthenticated(false);
+        }
+      })
+      .catch(() => setIsAuthenticated(false));
   }, [supabase.auth]);
 
   // Yukleniyor

@@ -33,12 +33,24 @@ export default function WaitlistPage() {
           return;
         }
 
+        // Admin email ise waitlist'e eklemeden /admin'e yonlendir
+        const ADMIN_EMAILS = ["aytekinbirkon@gmail.com"];
+        if (ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
+          window.location.href = "/admin";
+          return;
+        }
+
+        // Waitlist'e ekle
         const res = await fetch("/api/waitlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: userEmail }),
         });
         const result = await res.json();
+
+        // GUVENLIK: Waitlist kaydindan sonra Supabase session'i hemen kapat
+        // Boylece kullanici /dashboard'a yonlendirilse bile AuthOverlay engeller
+        await supabase.auth.signOut();
 
         if (!res.ok) {
           setErrorMsg(result.error || "Bir hata olustu");
