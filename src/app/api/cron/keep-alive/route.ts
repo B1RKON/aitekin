@@ -3,12 +3,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * Daily keep-alive cron job
- * Supabase Free plan 7 gun aktivite yoksa projeyi pause ediyor.
- * Vercel Cron bu endpoint'i gunluk cagirir, minik bir query ile
- * Supabase'e aktivite sayilir ve pause onlenir.
- *
- * Schedule: vercel.json'da tanimli (0 6 * * * = her gun UTC 06:00)
- * Security: Vercel Cron istekleri Authorization: Bearer <CRON_SECRET> header'i ile gelir
+ * Supabase Free plan 7 gun aktivite yoksa pause ediyor.
+ * SELECT yetersiz olabiliyor — heartbeat tablosuna UPDATE atariz (kesin aktivite).
  */
 export async function GET(req: Request) {
   // Vercel Cron authentication
@@ -20,23 +16,43 @@ export async function GET(req: Request) {
 
   try {
     const supabase = createServiceClient();
-    // Minik query - sadece 1 row cek, veriyi kullanmiyoruz
-    const { error } = await supabase
-      .from("waitlist")
-      .select("id")
-      .limit(1);
+    const now = new Date().toISOString();
 
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message, at: new Date().toISOString() },
-        { status: 500 }
-      );
+    // 1. Heartbeat UPDATE - kesin write activity
+    const { error: hbError } = await supabase
+      .from("heartbeat")
+      .update({ last_ping: now, count: Math.floor(Date.now() / 1000) })
+      .eq("id", 1);
+
+    // Heartbeat tablosu yoksa fallback: waitlist'te SELECT
+    if (hbError) {
+      const { error: wlError } = await supabase
+        .from("waitlist")
+        .select("id")
+        .limit(1);
+      if (wlError) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `heartbeat: ${hbError.message}, waitlist: ${wlError.message}`,
+            at: now,
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({
+        ok: true,
+        at: now,
+        method: "select-fallback",
+        message: "Heartbeat tablosu yok, waitlist SELECT yapildi",
+      });
     }
 
     return NextResponse.json({
       ok: true,
-      at: new Date().toISOString(),
-      message: "Supabase ping basarili - proje aktif tutuluyor",
+      at: now,
+      method: "heartbeat-update",
+      message: "Heartbeat UPDATE basarili - kesin aktivite",
     });
   } catch (err) {
     return NextResponse.json(
