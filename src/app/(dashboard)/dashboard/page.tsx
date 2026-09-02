@@ -18,6 +18,7 @@ import {
   Zap,
   Clock,
   TrendingUp,
+  Drama,
 } from "lucide-react";
 import Link from "next/link";
 import ScrollReveal from "@/components/animations/ScrollReveal";
@@ -38,6 +39,7 @@ const quickTools = [
   { icon: FileType, label: "Metin Ozet", href: "/dashboard/tools/text-summarizer", color: "pink" },
   { icon: Film, label: "Video Olustur", href: "/dashboard/tools/video-generator", color: "pink" },
   { icon: Download, label: "Video Indir", href: "/dashboard/tools/video-downloader", color: "green" },
+  { icon: Drama, label: "Tiyatro AI", href: "/dashboard/tools/tiyatro-ai", color: "pink" },
 ];
 
 const iconColors: Record<string, string> = {
@@ -61,7 +63,7 @@ export default function DashboardPage() {
           <span className="text-neon-cyan italic font-serif">B1RKON</span>
         </h1>
         <p className="text-text-secondary text-base lg:text-lg max-w-2xl">
-          Hangi aracla baslamak istersin? 14 ucretsiz AI araci seni bekliyor.
+          Hangi aracla baslamak istersin? 15 ucretsiz AI araci seni bekliyor.
         </p>
       </ScrollReveal>
 

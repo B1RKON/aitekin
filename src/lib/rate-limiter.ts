@@ -26,3 +26,31 @@ export function checkDailyLimit(key: string, maxPerDay: number): { allowed: bool
   existing.count++;
   return { allowed: true, remaining: maxPerDay - existing.count };
 }
+
+/**
+ * Miktar bazli gunluk butce (orn. TTS karakter sayisi).
+ * checkDailyLimit sadece cagri sayar; bu fonksiyon toplam miktari izler.
+ */
+const usage = new Map<string, { used: number; resetAt: number }>();
+
+export function addDailyUsage(
+  key: string,
+  amount: number,
+  maxPerDay: number
+): { allowed: boolean; used: number } {
+  const now = Date.now();
+  const existing = usage.get(key);
+
+  if (!existing || now > existing.resetAt) {
+    if (amount > maxPerDay) return { allowed: false, used: 0 };
+    usage.set(key, { used: amount, resetAt: now + 24 * 60 * 60 * 1000 });
+    return { allowed: true, used: amount };
+  }
+
+  if (existing.used + amount > maxPerDay) {
+    return { allowed: false, used: existing.used };
+  }
+
+  existing.used += amount;
+  return { allowed: true, used: existing.used };
+}

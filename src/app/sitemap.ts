@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "ocr-solver",
     "text-summarizer",
     "video-downloader",
+    "tiyatro-ai",
   ];
 
   const games = ["retro-emulator", "html5-games", "pixel-art"];

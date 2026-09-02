@@ -28,6 +28,7 @@ import {
   Sparkles,
   Eraser,
   Download,
+  Drama,
 } from "lucide-react";
 import { useState } from "react";
 import { warmToolSpaces } from "@/lib/space-warmer";
@@ -54,6 +55,7 @@ const toolItems: NavItem[] = [
   { icon: Calculator, label: "ocr-solver", href: "/dashboard/tools/ocr-solver", color: "text-neon-green" },
   { icon: FileType, label: "text-summarizer", href: "/dashboard/tools/text-summarizer", color: "text-neon-pink" },
   { icon: Download, label: "video-downloader", href: "/dashboard/tools/video-downloader", color: "text-neon-green" },
+  { icon: Drama, label: "tiyatro-ai", href: "/dashboard/tools/tiyatro-ai", color: "text-neon-pink" },
 ];
 
 const otherItems: NavItem[] = [

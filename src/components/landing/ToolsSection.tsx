@@ -15,6 +15,7 @@ import {
   Eraser,
   Film,
   Download,
+  Drama,
 } from "lucide-react";
 import Link from "next/link";
 import ScrollReveal from "@/components/animations/ScrollReveal";
@@ -36,6 +37,7 @@ const tools = [
   { icon: Eraser, title: "Arka Plan Kaldirici", category: "AI", href: "/dashboard/tools/object-remover", color: "pink" },
   { icon: Download, title: "Video Indirici", category: "API", href: "/dashboard/tools/video-downloader", color: "green" },
   { icon: FileType, title: "Metin Ozetleme", category: "NLP", href: "/dashboard/tools/text-summarizer", color: "cyan" },
+  { icon: Drama, title: "Tiyatro AI", category: "STT+TTS", href: "/dashboard/tools/tiyatro-ai", color: "pink" },
 ];
 
 export default function ToolsSection() {
@@ -48,7 +50,7 @@ export default function ToolsSection() {
 
         <ScrollReveal delay={0.1}>
           <h2 className="text-display-sm font-bold leading-[0.9] tracking-tighter mb-20 max-w-5xl">
-            14 ucretsiz AI <br />
+            15 ucretsiz AI <br />
             <span className="text-neon-cyan italic font-serif">araci</span>, tek platform.
           </h2>
         </ScrollReveal>

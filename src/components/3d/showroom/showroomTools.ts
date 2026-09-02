@@ -80,6 +80,7 @@ export const SHOWROOM_TOOLS: ShowroomTool[] = [
   // Oda 5 - Metin/AI g2 (2 arac)
   { id: "ai-chat",           label: "AI Sohbet",         href: "/dashboard/tools/ai-chat",           color: "pink",   hexColor: NEON_COLORS.pink,   iconChar: "C", description: "Llama, GPT-OSS",           roomIndex: 5, slotIndex: 0 },
   { id: "text-summarizer",   label: "Metin Özetleme",    href: "/dashboard/tools/text-summarizer",   color: "pink",   hexColor: NEON_COLORS.pink,   iconChar: "S", description: "Uzun metin özetle",        roomIndex: 5, slotIndex: 2 },
+  { id: "tiyatro-ai",        label: "Tiyatro AI",        href: "/dashboard/tools/tiyatro-ai",        color: "pink",   hexColor: NEON_COLORS.pink,   iconChar: "T", description: "Sahnede AI karakter",      roomIndex: 5, slotIndex: 1 },
 ];
 
 /**
