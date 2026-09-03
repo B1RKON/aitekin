@@ -19,6 +19,8 @@ import { Badge, BigButton, Field, Panel, SmallButton, inputCls } from "./ui";
 
 interface Props {
   initial: ClientScenario | null;
+  /** Metinden ice aktarilan, henuz kaydedilmemis taslak */
+  draft?: ScenarioInput | null;
   onSaved: (s: ClientScenario) => void;
   onCancel: () => void;
 }
@@ -37,8 +39,10 @@ function blankInput(): ScenarioInput {
 
 const ESNEKLIK_LABEL: Record<Esneklik, string> = { dusuk: "Düşük (birebir)", orta: "Orta", yuksek: "Yüksek" };
 
-export default function ScenarioEditor({ initial, onSaved, onCancel }: Props) {
-  const [form, setForm] = useState<ScenarioInput>(() => (initial ? toScenarioInput(initial) : blankInput()));
+export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Props) {
+  const [form, setForm] = useState<ScenarioInput>(() =>
+    initial ? toScenarioInput(initial) : draft ? { ...draft } : blankInput()
+  );
   const [catalog, setCatalog] = useState<VoiceCatalog | null>(null);
   const [voicesErr, setVoicesErr] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);

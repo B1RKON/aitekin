@@ -3,18 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Drama, LogOut } from "lucide-react";
-import type { ClientScenario } from "@/lib/tiyatro/schema";
+import type { ClientScenario, ScenarioInput } from "@/lib/tiyatro/schema";
 import { tiyatroApi, type AuthStatus } from "@/lib/tiyatro/api.client";
 import * as cache from "@/lib/tiyatro/localCache";
 import PinGate from "@/components/tiyatro/PinGate";
 import SystemCheck from "@/components/tiyatro/SystemCheck";
 import ScenarioList from "@/components/tiyatro/ScenarioList";
 import ScenarioEditor from "@/components/tiyatro/ScenarioEditor";
+import ScriptImport from "@/components/tiyatro/ScriptImport";
 import StagePanel from "@/components/tiyatro/StagePanel";
 import RehearsalPanel from "@/components/tiyatro/RehearsalPanel";
 import { Badge, Panel } from "@/components/tiyatro/ui";
 
-type Tab = "senaryolar" | "duzenle" | "prova" | "sahne";
+type Tab = "senaryolar" | "metinden" | "duzenle" | "prova" | "sahne";
 
 export default function TiyatroPage() {
   return (
@@ -30,6 +31,8 @@ function OperatorApp({ auth }: { auth: AuthStatus }) {
   const [offline, setOffline] = useState(false);
   // undefined = henuz secilmedi, null = yeni senaryo
   const [editing, setEditing] = useState<ClientScenario | null | undefined>(undefined);
+  const [draft, setDraft] = useState<ScenarioInput | null>(null);
+  const [draftKey, setDraftKey] = useState(0);
   const [restoring, setRestoring] = useState(true);
 
   // Son acilan senaryoyu geri yukle (sunucu -> yoksa onbellek)
@@ -74,12 +77,22 @@ function OperatorApp({ auth }: { auth: AuthStatus }) {
 
   const edit = useCallback((s: ClientScenario | null) => {
     setEditing(s);
+    setDraft(null);
+    setDraftKey((k) => k + 1);
+    setTab("duzenle");
+  }, []);
+
+  const importDraft = useCallback((input: ScenarioInput) => {
+    setEditing(null);
+    setDraft(input);
+    setDraftKey((k) => k + 1);
     setTab("duzenle");
   }, []);
 
   const onSaved = useCallback(
     (s: ClientScenario) => {
       setEditing(s);
+      setDraft(null);
       if (!scenario || scenario.id === s.id) {
         setScenario(s);
         setOffline(false);
@@ -99,6 +112,7 @@ function OperatorApp({ auth }: { auth: AuthStatus }) {
 
   const tabs: { id: Tab; label: string; disabled?: boolean }[] = [
     { id: "senaryolar", label: "Senaryolar" },
+    { id: "metinden", label: "Metinden Çıkar" },
     { id: "duzenle", label: "Düzenle" },
     { id: "prova", label: "Prova", disabled: !scenario },
     { id: "sahne", label: "Sahne", disabled: !scenario },
@@ -161,10 +175,12 @@ function OperatorApp({ auth }: { auth: AuthStatus }) {
           <ScenarioList onOpen={open} onEdit={(s) => edit(s)} onNew={() => edit(null)} />
         </div>
       )}
+      {tab === "metinden" && <ScriptImport onImport={importDraft} />}
       {tab === "duzenle" && (
         <ScenarioEditor
-          key={editing?.id ?? "new"}
+          key={editing?.id ?? `new-${draftKey}`}
           initial={editing ?? null}
+          draft={draft}
           onSaved={onSaved}
           onCancel={() => setTab("senaryolar")}
         />
