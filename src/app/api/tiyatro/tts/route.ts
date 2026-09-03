@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addDailyUsage, checkDailyLimit } from "@/lib/rate-limiter";
 import { isTiyatroAuthorized, unauthorizedResponse } from "@/lib/tiyatro/auth";
-import { synthesize } from "@/lib/tiyatro/googleTts";
+import { synthesize } from "@/lib/tiyatro/tts";
 import { VOICE_RE } from "@/lib/tiyatro/schema";
 import { handleError } from "../_shared";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Play, Plus, Trash2, ArrowUp, ArrowDown, Save } from "lucide-react";
 import type { ClientScenario, Esneklik, LineInput, ScenarioInput } from "@/lib/tiyatro/schema";
 import {
@@ -12,7 +12,7 @@ import {
   toScenarioInput,
   validateScenarioInput,
 } from "@/lib/tiyatro/schema";
-import { ApiError, tiyatroApi, type AudioGenResult, type VoiceInfo } from "@/lib/tiyatro/api.client";
+import { ApiError, tiyatroApi, type AudioGenResult, type VoiceCatalog } from "@/lib/tiyatro/api.client";
 import { useAudioPlayer } from "@/hooks/tiyatro/useAudioPlayer";
 import * as cache from "@/lib/tiyatro/localCache";
 import { Badge, BigButton, Field, Panel, SmallButton, inputCls } from "./ui";
@@ -39,7 +39,7 @@ const ESNEKLIK_LABEL: Record<Esneklik, string> = { dusuk: "Düşük (birebir)", 
 
 export default function ScenarioEditor({ initial, onSaved, onCancel }: Props) {
   const [form, setForm] = useState<ScenarioInput>(() => (initial ? toScenarioInput(initial) : blankInput()));
-  const [voices, setVoices] = useState<VoiceInfo[] | null>(null);
+  const [catalog, setCatalog] = useState<VoiceCatalog | null>(null);
   const [voicesErr, setVoicesErr] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -54,10 +54,22 @@ export default function ScenarioEditor({ initial, onSaved, onCancel }: Props) {
     let alive = true;
     tiyatroApi
       .listVoices()
-      .then((v) => alive && setVoices(v))
+      .then((c) => {
+        if (!alive) return;
+        setCatalog(c);
+        // Senaryodaki ses aktif saglayicida yoksa varsayilana cek; hiz/ton araligini saglayiciya uydur
+        setForm((f) => {
+          const known = c.voices.some((v) => v.id === f.sesModeli);
+          const sesModeli = known || !c.defaultVoice ? f.sesModeli : c.defaultVoice;
+          const [lo, hi] = c.speedRange;
+          const speakingRate = Math.min(hi, Math.max(lo, f.sesAyar.speakingRate));
+          const pitch = c.supportsPitch ? f.sesAyar.pitch : 0;
+          return { ...f, sesModeli, sesAyar: { speakingRate, pitch } };
+        });
+      })
       .catch((e) => {
         if (!alive) return;
-        setVoices([]);
+        setCatalog(null);
         setVoicesErr(e instanceof ApiError ? e.message : "Ses listesi alınamadı.");
       });
     return () => {
@@ -65,11 +77,11 @@ export default function ScenarioEditor({ initial, onSaved, onCancel }: Props) {
     };
   }, []);
 
-  const voiceOptions = useMemo(() => {
-    const names = new Set((voices ?? []).map((v) => v.name));
-    if (form.sesModeli && !names.has(form.sesModeli)) names.add(form.sesModeli);
-    return Array.from(names).sort();
-  }, [voices, form.sesModeli]);
+  const providerLabel = catalog?.provider === "elevenlabs" ? "ElevenLabs" : catalog?.provider === "google" ? "Google TTS" : null;
+  const quotaLabel =
+    catalog?.quota && catalog.quota.limit > 0
+      ? ` · kota ${catalog.quota.used.toLocaleString("tr-TR")}/${catalog.quota.limit.toLocaleString("tr-TR")}`
+      : "";
 
   const set = <K extends keyof ScenarioInput>(k: K, v: ScenarioInput[K]) => setForm((f) => ({ ...f, [k]: v }));
   const setLine = (i: number, patch: Partial<LineInput>) =>
@@ -186,45 +198,64 @@ export default function ScenarioEditor({ initial, onSaved, onCancel }: Props) {
         </div>
       </Panel>
 
-      <Panel title="Ses">
+      <Panel
+        title="Ses"
+        right={
+          providerLabel ? (
+            <Badge tone={catalog?.provider === "elevenlabs" ? "purple" : "cyan"}>
+              {providerLabel}
+              {quotaLabel}
+            </Badge>
+          ) : null
+        }
+      >
         <div className="grid md:grid-cols-4 gap-4 items-end">
-          <Field label="Ses modeli" hint={voicesErr ?? (voices ? `${voices.length} Türkçe ses` : "yükleniyor…")}>
-            {voices && voices.length > 0 ? (
+          <Field
+            label="Ses modeli"
+            hint={voicesErr ?? (catalog ? `${catalog.voices.length} ses · ${catalog.modelId}` : "yükleniyor…")}
+          >
+            {catalog && catalog.voices.length > 0 ? (
               <select className={inputCls} value={form.sesModeli} onChange={(e) => set("sesModeli", e.target.value)}>
-                {voiceOptions.map((n) => {
-                  const v = voices.find((x) => x.name === n);
-                  return (
-                    <option key={n} value={n}>
-                      {n}
-                      {v ? ` (${v.gender === "MALE" ? "erkek" : v.gender === "FEMALE" ? "kadın" : "nötr"})` : ""}
-                    </option>
-                  );
-                })}
+                {!catalog.voices.some((v) => v.id === form.sesModeli) && (
+                  <option value={form.sesModeli}>{form.sesModeli}</option>
+                )}
+                {catalog.voices.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
+                  </option>
+                ))}
               </select>
             ) : (
               <input className={inputCls} value={form.sesModeli} onChange={(e) => set("sesModeli", e.target.value)} />
             )}
           </Field>
-          <Field label={`Hız ${form.sesAyar.speakingRate.toFixed(2)}`}>
+          <Field
+            label={`Hız ${form.sesAyar.speakingRate.toFixed(2)}`}
+            hint={catalog ? `${catalog.speedRange[0]} – ${catalog.speedRange[1]}` : undefined}
+          >
             <input
               type="range"
-              min={0.5}
-              max={2}
+              min={catalog?.speedRange[0] ?? 0.5}
+              max={catalog?.speedRange[1] ?? 2}
               step={0.05}
               value={form.sesAyar.speakingRate}
               onChange={(e) => set("sesAyar", { ...form.sesAyar, speakingRate: Number(e.target.value) })}
               className="w-full accent-[#FF0080]"
             />
           </Field>
-          <Field label={`Ton ${form.sesAyar.pitch > 0 ? "+" : ""}${form.sesAyar.pitch}`} hint="Chirp seslerinde yok sayılır">
+          <Field
+            label={`Ton ${form.sesAyar.pitch > 0 ? "+" : ""}${form.sesAyar.pitch}`}
+            hint={catalog && !catalog.supportsPitch ? "Bu sağlayıcıda ton ayarı yok" : "Chirp seslerinde yok sayılır"}
+          >
             <input
               type="range"
               min={-10}
               max={10}
               step={1}
               value={form.sesAyar.pitch}
+              disabled={!!catalog && !catalog.supportsPitch}
               onChange={(e) => set("sesAyar", { ...form.sesAyar, pitch: Number(e.target.value) })}
-              className="w-full accent-[#FF0080]"
+              className="w-full accent-[#FF0080] disabled:opacity-30"
             />
           </Field>
           <SmallButton tone="cyan" onClick={preview} disabled={previewing || player.isSpeaking} className="h-10">

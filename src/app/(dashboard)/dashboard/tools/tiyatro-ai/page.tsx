@@ -83,7 +83,7 @@ export default function TiyatroAiPage() {
 
       <p className="text-xs text-text-secondary mt-6">
         Senaryo formatı: <code className="text-neon-cyan">{"{ oyunAdi, karakter, sesModeli, replikler: [{ sira, tetikleyici, yanit, esneklik }] }"}</code>.
-        Sesler Google Cloud TTS ile bir kez üretilip saklanır; gösteri gecesi internet kesilse bile önbellekten çalar.
+        Sesler ElevenLabs ile bir kez üretilip saklanır; gösteri gecesi internet kesilse bile önbellekten çalar.
       </p>
     </div>
   );

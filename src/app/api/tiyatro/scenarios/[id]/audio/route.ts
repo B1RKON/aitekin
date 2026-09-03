@@ -4,7 +4,7 @@ import { isTiyatroAuthorized, unauthorizedResponse } from "@/lib/tiyatro/auth";
 import { SLUG_RE, type Line } from "@/lib/tiyatro/schema";
 import { getScenarioRow, updateLines } from "@/lib/tiyatro/db";
 import { removePaths, uploadAudio } from "@/lib/tiyatro/storage";
-import { synthesize } from "@/lib/tiyatro/googleTts";
+import { synthesize, voiceKey } from "@/lib/tiyatro/tts";
 import { audioPathFor, lineHash } from "@/lib/tiyatro/hash";
 import { handleError } from "../../../_shared";
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const voice = s.sesModeli;
     const { speakingRate, pitch } = s.sesAyar;
-    const hashOf = (l: Line) => lineHash(l.yanit, voice, speakingRate, pitch);
+    const hashOf = (l: Line) => lineHash(l.yanit, voiceKey(voice), speakingRate, pitch);
 
     let lines: Line[] = s.replikler.map((l) => ({ ...l }));
     if (force) {

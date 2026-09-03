@@ -31,9 +31,26 @@ export interface AudioGenResult {
 }
 
 export interface VoiceInfo {
-  name: string;
+  id: string;
+  label: string;
   gender: string;
-  languageCodes: string[];
+}
+
+export interface VoiceQuota {
+  used: number;
+  limit: number;
+  resetAt: number | null;
+  tier: string;
+}
+
+export interface VoiceCatalog {
+  provider: "elevenlabs" | "google";
+  voices: VoiceInfo[];
+  defaultVoice: string | null;
+  quota: VoiceQuota | null;
+  modelId: string;
+  supportsPitch: boolean;
+  speedRange: [number, number];
 }
 
 async function parseError(res: Response): Promise<ApiError> {
@@ -126,5 +143,5 @@ export const tiyatroApi = {
     return res.blob();
   },
 
-  listVoices: async () => (await request<{ voices: VoiceInfo[] }>("/api/tiyatro/voices")).voices,
+  listVoices: () => request<VoiceCatalog>("/api/tiyatro/voices"),
 };

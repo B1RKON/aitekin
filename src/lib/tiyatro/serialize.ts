@@ -4,9 +4,10 @@
 import type { ClientLine, ClientScenario, Line, Scenario, ScenarioSummary } from "./schema";
 import { lineHash } from "./hash";
 import { signedUrls } from "./storage";
+import { voiceKey } from "./tts";
 
 export function currentHash(s: Scenario, l: Line): string {
-  return lineHash(l.yanit, s.sesModeli, s.sesAyar.speakingRate, s.sesAyar.pitch);
+  return lineHash(l.yanit, voiceKey(s.sesModeli), s.sesAyar.speakingRate, s.sesAyar.pitch);
 }
 
 export function isAudioReady(s: Scenario, l: Line): boolean {

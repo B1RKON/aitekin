@@ -89,7 +89,8 @@ export const LIMITS = {
 };
 
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,63}$/;
-export const VOICE_RE = /^tr-TR-[A-Za-z0-9-]{1,40}$/;
+/** Google (tr-TR-...) veya ElevenLabs voice_id (alfanumerik) */
+export const VOICE_RE = /^(tr-TR-[A-Za-z0-9-]{1,40}|[A-Za-z0-9_-]{8,64})$/;
 
 const TR_MAP: Record<string, string> = {
   ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u",

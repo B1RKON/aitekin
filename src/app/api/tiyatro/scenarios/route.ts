@@ -6,6 +6,7 @@ import { embedTexts } from "@/lib/tiyatro/embed.server";
 import { getScenarioRow, listScenarios, upsertScenario } from "@/lib/tiyatro/db";
 import { removePaths } from "@/lib/tiyatro/storage";
 import { lineHash } from "@/lib/tiyatro/hash";
+import { voiceKey } from "@/lib/tiyatro/tts";
 import { toClientScenario, toSummary } from "@/lib/tiyatro/serialize";
 import { TiyatroConfigError, errorMessage } from "@/lib/tiyatro/errors";
 import { handleError } from "../_shared";
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     const usedPaths = new Set<string>();
     const replikler: Line[] = input.replikler.map((l, i) => {
-      const h = lineHash(l.yanit, input.sesModeli, input.sesAyar.speakingRate, input.sesAyar.pitch);
+      const h = lineHash(l.yanit, voiceKey(input.sesModeli), input.sesAyar.speakingRate, input.sesAyar.pitch);
       const prev = prevByHash.get(h);
       const line: Line = { ...l, embedding: embeddings[i] };
       if (prev?.audioPath) {
