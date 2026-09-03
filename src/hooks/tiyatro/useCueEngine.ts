@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClientLine, ClientScenario, CueMode, ScenarioSettings } from "@/lib/tiyatro/schema";
 import {
+  PAUSE_MIN_COVERAGE,
+  bestCoverage,
   createInitialState,
   goBack,
   isFastPath,
@@ -41,6 +43,8 @@ export interface CueEngineApi {
   evaluate: (text: string, at?: number) => Promise<CueResult>;
   /** Ag cagrisi yok: oyuncu konusurken aninda yerel degerlendirme */
   evaluateInterim: (text: string, at?: number) => CueResult;
+  /** Oyuncu sustugunda (Chrome'un final'ini beklemeden) tam degerlendirme */
+  evaluatePause: (text: string, at?: number) => Promise<CueResult>;
   markPlayed: (index: number) => void;
   manualNext: () => number | null;
   skip: () => void;
@@ -236,6 +240,27 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
     [pushLog, update]
   );
 
+  /**
+   * Oyuncu konusmayi biraktiginda calisir. Chrome bir cumleyi "kesinlesmis" saymak icin
+   * 1-2 saniye bekler; biz ~600 ms duraklamada degerlendirip o kaybi onleriz.
+   * Cumle yarim kalmissa (kapsama dusuk) dokunmaz, gercek final'i bekler.
+   */
+  const evaluatePause = useCallback(
+    async (text: string, at: number = Date.now()): Promise<CueResult> => {
+      const cov = bestCoverage(text, linesRef.current, stateRef.current, modeRef.current);
+      if (cov < PAUSE_MIN_COVERAGE) {
+        const r = scoreCandidates(text, null, linesRef.current, stateRef.current, {
+          mode: modeRef.current,
+          threshold: thresholdRef.current,
+          now: at,
+        });
+        return { ...r, decision: "BEKLE", lineIndex: null, reason: "yarim-cumle" };
+      }
+      return evaluate(text, at);
+    },
+    [evaluate]
+  );
+
   const markPlayedIdx = useCallback(
     (index: number) => {
       const ls = linesRef.current;
@@ -284,6 +309,7 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
     semanticOk,
     evaluate,
     evaluateInterim,
+    evaluatePause,
     markPlayed: markPlayedIdx,
     manualNext,
     skip,

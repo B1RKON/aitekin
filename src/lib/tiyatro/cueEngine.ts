@@ -60,8 +60,19 @@ export const SEM_WEIGHT = 0.75;
 export const MARGIN = 0.05;
 /** Ara sonuclar (oyuncu daha konusurken) icin en dusuk etkin bar */
 export const INTERIM_MIN_BAR = 0.7;
-/** Ara sonucta tetiklemek icin tetikleyicinin en az bu orani soylenmis olmali */
+/** Aninda tetikleme icin tetikleyicinin en az bu orani taninmis olmali */
 export const INTERIM_MIN_COVERAGE = 0.85;
+/** Oyuncu sustuktan sonraki degerlendirme icin daha musamahakar kapsama esigi */
+export const PAUSE_MIN_COVERAGE = 0.7;
+
+/** Aday replikler icinde en yuksek kapsama orani (0..1) */
+export function bestCoverage(utt: string, lines: Line[], state: CueState, mode: CueMode): number {
+  let best = 0;
+  for (const i of candidateIndices(state, mode, lines.length)) {
+    best = Math.max(best, coverage(utt, lines[i].tetikleyici));
+  }
+  return best;
+}
 
 /**
  * Ara sonuc degerlendirmesinde kullanilacak esik.

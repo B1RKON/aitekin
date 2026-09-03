@@ -14,6 +14,9 @@ import DecisionLog from "./DecisionLog";
 import SensitivityPanel from "./SensitivityPanel";
 import { Badge, BigButton, Panel } from "./ui";
 
+/** Oyuncu sustuktan sonra degerlendirmeye kadar beklenen sure */
+const PAUSE_MS = 600;
+
 export default function StagePanel({ scenario, offline }: { scenario: ClientScenario; offline: boolean }) {
   const engine = useCueEngine(scenario);
   const player = useAudioPlayer();
@@ -30,38 +33,102 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
   const [finals, setFinals] = useState<{ text: string; at: number }[]>([]);
   const [online, setOnline] = useState(true);
   const [micError, setMicError] = useState<string | null>(null);
+  const [meterOn, setMeterOn] = useState(true);
+  // Canli tani: ne duyuldu, hangi replige kac puan verildi, neden tetiklenmedi
+  const [live, setLive] = useState<{
+    text: string;
+    sira: number | null;
+    score: number;
+    bar: number;
+    reason: string;
+    kind: "ara" | "kesin";
+  } | null>(null);
+  const [counts, setCounts] = useState({ interim: 0, final: 0 });
 
   const playLineRef = useRef<(i: number) => Promise<void>>(async () => undefined);
+  const lastInterimRef = useRef("");
+  const pauseTimer = useRef<number | null>(null);
+
+  const clearPauseTimer = useCallback(() => {
+    if (pauseTimer.current !== null) {
+      window.clearTimeout(pauseTimer.current);
+      pauseTimer.current = null;
+    }
+  }, []);
 
   const handleFinal = useCallback(
     (text: string, at: number) => {
+      clearPauseTimer(); // final geldi, duraklama degerlendirmesine gerek yok
       setFinals((prev) => [{ text, at }, ...prev].slice(0, 6));
+      setCounts((c) => ({ ...c, final: c.final + 1 }));
       const s = statusRef.current;
       if (s !== "listening" && s !== "cooldown") return;
       void engine.evaluate(text, at).then((r) => {
+        setLive({
+          text,
+          sira: r.candidates[0]?.sira ?? null,
+          score: r.score,
+          bar: r.effectiveThreshold,
+          reason: r.reason,
+          kind: "kesin",
+        });
         if (r.decision === "OYNAT" && r.lineIndex != null && statusRef.current === "listening") {
           void playLineRef.current(r.lineIndex);
         }
       });
     },
-    [engine.evaluate] // eslint-disable-line react-hooks/exhaustive-deps
+    [engine.evaluate, clearPauseTimer] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // Ara sonuc: oyuncu konusurken yerel (ag cagrisiz) degerlendirme -> Chrome'un
   // 1-2 saniyelik "final" beklemesini atlar, replik biter bitmez tetiklenir.
-  const lastInterimRef = useRef("");
   const handleInterim = useCallback(
     (text: string, at: number) => {
-      if (!engine.interimMatch) return;
+      setCounts((c) => ({ ...c, interim: c.interim + 1 }));
       if (statusRef.current !== "listening") return;
-      if (text === lastInterimRef.current || text.trim().length < 10) return;
+      if (text === lastInterimRef.current || text.trim().length < 6) return;
       lastInterimRef.current = text;
+
+      // Duraklama algilayici: metin buyumeyi birakinca (= oyuncu sustu) degerlendir.
+      // Chrome'un 1-2 saniyelik "final" beklemesini beklemeyiz.
+      clearPauseTimer();
+      if (engine.interimMatch) {
+        const snapshot = text;
+        pauseTimer.current = window.setTimeout(() => {
+          pauseTimer.current = null;
+          if (statusRef.current !== "listening") return;
+          void engine.evaluatePause(snapshot).then((pr) => {
+            setLive({
+              text: snapshot,
+              sira: pr.candidates[0]?.sira ?? null,
+              score: pr.score,
+              bar: pr.effectiveThreshold,
+              reason: `duraklama · ${pr.reason}`,
+              kind: "kesin",
+            });
+            if (pr.decision === "OYNAT" && pr.lineIndex != null && statusRef.current === "listening") {
+              void playLineRef.current(pr.lineIndex);
+            }
+          });
+        }, PAUSE_MS);
+      }
+
       const r = engine.evaluateInterim(text, at);
+      // Tetiklemese bile canli skoru goster - tani icin kritik
+      setLive({
+        text,
+        sira: r.candidates[0]?.sira ?? null,
+        score: r.score,
+        bar: r.effectiveThreshold,
+        reason: r.reason,
+        kind: "ara",
+      });
+      if (!engine.interimMatch) return;
       if (r.decision === "OYNAT" && r.lineIndex != null && statusRef.current === "listening") {
         void playLineRef.current(r.lineIndex);
       }
     },
-    [engine.interimMatch, engine.evaluateInterim] // eslint-disable-line react-hooks/exhaustive-deps
+    [engine.interimMatch, engine.evaluateInterim, engine.evaluatePause, clearPauseTimer] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const stt = useSpeechRecognition({ onFinal: handleFinal, onInterim: handleInterim });
@@ -77,6 +144,7 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
       if (!line || playingRef.current) return;
       playingRef.current = true;
       lastInterimRef.current = "";
+      clearPauseTimer();
       setStatus("matched");
       sttRef.current.pause();
       engine.speakStarted();
@@ -106,6 +174,8 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
 
   const start = useCallback(async () => {
     setMicError(null);
+    setCounts({ interim: 0, final: 0 });
+    setLive(null);
     await player.unlock();
     setStatus("loading");
     await player.prefetchAll(engine.lines);
@@ -116,10 +186,11 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
 
   const stop = useCallback(() => {
     runningRef.current = false;
+    clearPauseTimer();
     sttRef.current.stop();
     player.stop();
     setStatus("paused");
-  }, [player, setStatus]);
+  }, [player, setStatus, clearPauseTimer]);
 
   const sayNow = useCallback(() => {
     if (playingRef.current) return;
@@ -179,6 +250,8 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
     };
   }, []);
 
+  useEffect(() => clearPauseTimer, [clearPauseTimer]);
+
   useWakeLock(status !== "idle" && status !== "paused");
 
   const running = status !== "idle" && status !== "paused" && status !== "loading";
@@ -235,8 +308,16 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
           </Panel>
         </div>
 
-        <Panel title="Canlı dinleme">
-          <MicMeter active={running || status === "loading"} onError={setMicError} />
+        <Panel
+          title="Canlı dinleme"
+          right={
+            <label className="text-[11px] text-zinc-500 flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={meterOn} onChange={(e) => setMeterOn(e.target.checked)} className="accent-[#39FF14]" />
+              seviye çubuğu
+            </label>
+          }
+        >
+          {meterOn && <MicMeter active={running || status === "loading"} onError={setMicError} />}
           <div className="mt-3 min-h-[3.5rem]">
             {stt.interim && <p className="text-zinc-400 italic">{stt.interim}…</p>}
             {finals.slice(0, 3).map((f) => (
@@ -247,6 +328,62 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
             ))}
           </div>
           {(stt.error || micError) && <p className="text-red-400 text-xs mt-2">{stt.error ?? micError}</p>}
+        </Panel>
+
+        <Panel title="Tanı — neden tetiklemiyor?">
+          <dl className="grid grid-cols-[104px_1fr] gap-y-1.5 text-xs">
+            <dt className="text-zinc-500">Mikrofon</dt>
+            <dd className={counts.interim > 0 ? "text-neon-green" : "text-red-400"}>
+              {counts.interim > 0
+                ? `duyuluyor · ${counts.interim} ara, ${counts.final} kesin sonuç`
+                : running
+                ? "HİÇ SES ALINMIYOR — konuşma tanıma metin üretmiyor"
+                : "başlatılmadı"}
+            </dd>
+
+            <dt className="text-zinc-500">Duyulan</dt>
+            <dd className="text-zinc-200 break-words">{live ? `“${live.text}”` : "—"}</dd>
+
+            <dt className="text-zinc-500">En yakın</dt>
+            <dd className="text-zinc-200">
+              {live?.sira != null ? (
+                <>
+                  #{live.sira} · skor{" "}
+                  <span className={live.score >= live.bar ? "text-neon-green" : "text-neon-yellow"}>
+                    {live.score.toFixed(2)}
+                  </span>{" "}
+                  <span className="text-zinc-600">/ gereken {live.bar.toFixed(2)}</span>
+                </>
+              ) : (
+                "—"
+              )}
+            </dd>
+
+            <dt className="text-zinc-500">Sonuç</dt>
+            <dd>
+              {live ? (
+                <>
+                  <span className="text-zinc-300">{live.reason}</span>
+                  <span className="text-zinc-600 ml-2">({live.kind} sonuç)</span>
+                </>
+              ) : (
+                "—"
+              )}
+            </dd>
+
+            <dt className="text-zinc-500">Ses dosyası</dt>
+            <dd className={player.progress.missing.length ? "text-neon-yellow" : "text-zinc-300"}>
+              {player.progress.total
+                ? `${player.progress.ready}/${player.progress.total} hazır`
+                : "BAŞLAT ile yüklenecek"}
+            </dd>
+          </dl>
+          <p className="text-[11px] text-zinc-600 mt-3 leading-relaxed">
+            <span className="text-zinc-500">esik-alti</span> = cümle tanındı ama replikle yeterince eşleşmedi (eşiği düşür
+            veya tetikleyiciyi düzelt). <span className="text-zinc-500">yarim-cumle</span> = daha bitirmedin, normal.{" "}
+            <span className="text-zinc-500">cok-kisa</span> = 8 karakterden kısa.{" "}
+            <span className="text-zinc-500">echo-guard / cooldown</span> = karakter yeni konuştu, 2 sn bekle.
+          </p>
         </Panel>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
