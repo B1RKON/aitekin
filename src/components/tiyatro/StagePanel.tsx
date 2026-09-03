@@ -11,10 +11,8 @@ import { useWakeLock } from "@/hooks/tiyatro/useWakeLock";
 import StatusBadge, { type StageStatus } from "./StatusBadge";
 import MicMeter from "./MicMeter";
 import DecisionLog from "./DecisionLog";
-import { Badge, BigButton, Panel, SmallButton } from "./ui";
-
-const PRELUDE_MIN_MS = 400;
-const PRELUDE_RANGE_MS = 500;
+import SensitivityPanel from "./SensitivityPanel";
+import { Badge, BigButton, Panel } from "./ui";
 
 export default function StagePanel({ scenario, offline }: { scenario: ClientScenario; offline: boolean }) {
   const engine = useCueEngine(scenario);
@@ -49,7 +47,24 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
     [engine.evaluate] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const stt = useSpeechRecognition({ onFinal: handleFinal });
+  // Ara sonuc: oyuncu konusurken yerel (ag cagrisiz) degerlendirme -> Chrome'un
+  // 1-2 saniyelik "final" beklemesini atlar, replik biter bitmez tetiklenir.
+  const lastInterimRef = useRef("");
+  const handleInterim = useCallback(
+    (text: string, at: number) => {
+      if (!engine.interimMatch) return;
+      if (statusRef.current !== "listening") return;
+      if (text === lastInterimRef.current || text.trim().length < 10) return;
+      lastInterimRef.current = text;
+      const r = engine.evaluateInterim(text, at);
+      if (r.decision === "OYNAT" && r.lineIndex != null && statusRef.current === "listening") {
+        void playLineRef.current(r.lineIndex);
+      }
+    },
+    [engine.interimMatch, engine.evaluateInterim] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const stt = useSpeechRecognition({ onFinal: handleFinal, onInterim: handleInterim });
   const sttRef = useRef(stt);
   useEffect(() => {
     sttRef.current = stt;
@@ -61,10 +76,13 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
       const line = engine.lines[i];
       if (!line || playingRef.current) return;
       playingRef.current = true;
+      lastInterimRef.current = "";
       setStatus("matched");
       sttRef.current.pause();
       engine.speakStarted();
-      const preDelay = PRELUDE_MIN_MS + Math.floor(Math.random() * PRELUDE_RANGE_MS);
+      // Kullanicinin ayarladigi tepki gecikmesi (+ kucuk rastgelelik = dogallik)
+      const base = engine.reactionMs;
+      const preDelay = base > 0 ? base + Math.floor(Math.random() * Math.min(300, base)) : 0;
       setStatus("prelude");
       try {
         await player.play(line, { preDelayMs: preDelay, onStart: () => setStatus("speaking") });
@@ -269,6 +287,9 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
               {engine.semanticOk === true ? "semantik" : engine.semanticOk === false ? "fuzzy (yedek)" : "eşleştirme —"}
             </Badge>
             <Badge tone={online ? "green" : "red"}>{online ? "çevrimiçi" : "çevrimdışı — manuel mod"}</Badge>
+            <Badge tone={engine.interimMatch ? "green" : "gray"}>
+              {engine.interimMatch ? "hızlı eşleşme" : "final bekler"}
+            </Badge>
             {offline && <Badge tone="yellow">önbellekten</Badge>}
             <Badge tone={player.progress.missing.length === 0 && player.progress.total > 0 ? "green" : player.progress.total > 0 ? "yellow" : "gray"}>
               Ses {player.progress.ready}/{player.progress.total || engine.lines.length}
@@ -281,29 +302,16 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
           )}
         </Panel>
 
-        <Panel title="Hassasiyet">
-          <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
-            <span>Eşik</span>
-            <span className="tabular-nums text-neon-cyan">{engine.threshold.toFixed(2)}</span>
-          </div>
-          <input
-            type="range"
-            min={0.4}
-            max={0.9}
-            step={0.01}
-            value={engine.threshold}
-            onChange={(e) => engine.setThreshold(Number(e.target.value))}
-            className="w-full accent-[#00FFE5]"
-          />
-          <div className="flex gap-2 mt-3">
-            <SmallButton tone={engine.mode === "sirali" ? "cyan" : "gray"} onClick={() => engine.setMode("sirali")} className="flex-1">
-              Sıralı
-            </SmallButton>
-            <SmallButton tone={engine.mode === "serbest" ? "cyan" : "gray"} onClick={() => engine.setMode("serbest")} className="flex-1">
-              Serbest
-            </SmallButton>
-          </div>
-        </Panel>
+        <SensitivityPanel
+          threshold={engine.threshold}
+          setThreshold={engine.setThreshold}
+          mode={engine.mode}
+          setMode={engine.setMode}
+          reactionMs={engine.reactionMs}
+          setReactionMs={engine.setReactionMs}
+          interimMatch={engine.interimMatch}
+          setInterimMatch={engine.setInterimMatch}
+        />
 
         <Panel title="Son kararlar">
           <DecisionLog log={engine.log} limit={5} />

@@ -7,7 +7,7 @@ export const SAMPLE_SCENARIO: ScenarioInput = {
   karakter: "Yüzbaşı Kemal",
   sesModeli: "tr-TR-Wavenet-B",
   sesAyar: { speakingRate: 0.95, pitch: -2 },
-  ayarlar: { threshold: 0.62, mode: "sirali", bridgeEnabled: false },
+  ayarlar: { threshold: 0.62, mode: "sirali", bridgeEnabled: false, reactionMs: 250, interimMatch: true },
   replikler: [
     {
       sira: 1,

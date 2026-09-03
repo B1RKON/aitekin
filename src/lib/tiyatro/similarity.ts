@@ -58,6 +58,20 @@ export function fuzzyScore(a: string, b: string): number {
   return 0.5 * diceTokens(a, b) + 0.5 * diceBigrams(a, b);
 }
 
+/**
+ * Tetikleyicinin kac kelimesi soylendi? (0..1)
+ * fuzzyScore yarim cumleyi ayirt edemez; bu ayirt eder: oyuncu repligi tamamlamadan
+ * ara sonuc tetiklenmesin diye kullanilir.
+ */
+export function coverage(utterance: string, cue: string): number {
+  const c = new Set(tokens(cue));
+  if (!c.size) return 0;
+  const u = new Set(tokens(utterance));
+  let hit = 0;
+  for (const t of c) if (u.has(t)) hit++;
+  return hit / c.size;
+}
+
 export function cosine(a: number[], b: number[]): number {
   if (!a.length || a.length !== b.length) return 0;
   let dot = 0;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ClientLine, ClientScenario, CueMode } from "@/lib/tiyatro/schema";
+import type { ClientLine, ClientScenario, CueMode, ScenarioSettings } from "@/lib/tiyatro/schema";
 import {
   createInitialState,
   goBack,
@@ -11,13 +11,14 @@ import {
   preFilter,
   progressOf,
   scoreCandidates,
+  scoreInterim,
   type CueResult,
   type CueState,
 } from "@/lib/tiyatro/cueEngine";
 import { tiyatroApi } from "@/lib/tiyatro/api.client";
 import { loadSettings, saveSettings } from "@/lib/tiyatro/localCache";
 
-const EMBED_TIMEOUT_MS = 1500;
+const EMBED_TIMEOUT_MS = 1200;
 const BUFFER_WINDOW_MS = 6000;
 const LOG_MAX = 60;
 
@@ -31,9 +32,15 @@ export interface CueEngineApi {
   setThreshold: (v: number) => void;
   mode: CueMode;
   setMode: (m: CueMode) => void;
+  reactionMs: number;
+  setReactionMs: (v: number) => void;
+  interimMatch: boolean;
+  setInterimMatch: (v: boolean) => void;
   log: CueResult[];
   semanticOk: boolean | null;
   evaluate: (text: string, at?: number) => Promise<CueResult>;
+  /** Ag cagrisi yok: oyuncu konusurken aninda yerel degerlendirme */
+  evaluateInterim: (text: string, at?: number) => CueResult;
   markPlayed: (index: number) => void;
   manualNext: () => number | null;
   skip: () => void;
@@ -62,8 +69,11 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
   const initialSettings = scenario ? loadSettings(scenario.id) ?? scenario.ayarlar : null;
   const [threshold, setThresholdState] = useState<number>(initialSettings?.threshold ?? 0.62);
   const [mode, setModeState] = useState<CueMode>(initialSettings?.mode ?? "sirali");
+  const [reactionMs, setReactionMsState] = useState<number>(initialSettings?.reactionMs ?? 250);
+  const [interimMatch, setInterimMatchState] = useState<boolean>(initialSettings?.interimMatch !== false);
   const thresholdRef = useRef(threshold);
   const modeRef = useRef(mode);
+  const interimRef = useRef(interimMatch);
   const [log, setLog] = useState<CueResult[]>([]);
   const [semanticOk, setSemanticOk] = useState<boolean | null>(null);
   const segmentsRef = useRef<{ text: string; at: number }[]>([]);
@@ -76,22 +86,31 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
     setLog([]);
     segmentsRef.current = [];
     if (scenario) {
-      const s = loadSettings(scenario.id) ?? scenario.ayarlar;
+      const s = { ...scenario.ayarlar, ...(loadSettings(scenario.id) ?? {}) };
       thresholdRef.current = s.threshold;
       modeRef.current = s.mode;
+      interimRef.current = s.interimMatch !== false;
       setThresholdState(s.threshold);
       setModeState(s.mode);
+      setReactionMsState(s.reactionMs ?? 250);
+      setInterimMatchState(s.interimMatch !== false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId]);
 
   const persist = useCallback(
-    (t: number, m: CueMode) => {
-      if (scenarioId) {
-        saveSettings(scenarioId, { threshold: t, mode: m, bridgeEnabled: scenario?.ayarlar.bridgeEnabled ?? false });
-      }
+    (patch: Partial<ScenarioSettings>) => {
+      if (!scenarioId) return;
+      saveSettings(scenarioId, {
+        threshold: thresholdRef.current,
+        mode: modeRef.current,
+        bridgeEnabled: scenario?.ayarlar.bridgeEnabled ?? false,
+        reactionMs,
+        interimMatch: interimRef.current,
+        ...patch,
+      });
     },
-    [scenarioId, scenario?.ayarlar.bridgeEnabled]
+    [scenarioId, scenario?.ayarlar.bridgeEnabled, reactionMs]
   );
 
   const setThreshold = useCallback(
@@ -99,7 +118,7 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
       const t = Math.min(0.9, Math.max(0.4, Math.round(v * 100) / 100));
       thresholdRef.current = t;
       setThresholdState(t);
-      persist(t, modeRef.current);
+      persist({ threshold: t });
     },
     [persist]
   );
@@ -108,7 +127,25 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
     (m: CueMode) => {
       modeRef.current = m;
       setModeState(m);
-      persist(thresholdRef.current, m);
+      persist({ mode: m });
+    },
+    [persist]
+  );
+
+  const setReactionMs = useCallback(
+    (v: number) => {
+      const r = Math.round(Math.min(2000, Math.max(0, v)));
+      setReactionMsState(r);
+      persist({ reactionMs: r });
+    },
+    [persist]
+  );
+
+  const setInterimMatch = useCallback(
+    (v: boolean) => {
+      interimRef.current = v;
+      setInterimMatchState(v);
+      persist({ interimMatch: v });
     },
     [persist]
   );
@@ -116,6 +153,27 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
   const pushLog = useCallback((r: CueResult) => {
     setLog((prev) => [r, ...prev].slice(0, LOG_MAX));
   }, []);
+
+  /**
+   * Ara sonuc degerlendirmesi: tamamen yerel (ag cagrisi yok), yuksek bar.
+   * Oyuncu cumleyi tamamladikca fuzzy skoru yukselir; bar asilinca hemen tetiklenir.
+   * Boylece Chrome'un "final" beklemesindeki 1-2 saniye kaybedilmez.
+   */
+  const evaluateInterim = useCallback(
+    (text: string, at: number = Date.now()): CueResult => {
+      const r = scoreInterim(text, linesRef.current, stateRef.current, {
+        mode: modeRef.current,
+        threshold: thresholdRef.current,
+        now: at,
+      });
+      if (r.decision === "OYNAT") {
+        update((s) => noteUtterance(s, text, at));
+        pushLog(r);
+      }
+      return r;
+    },
+    [pushLog, update]
+  );
 
   const evaluate = useCallback(
     async (text: string, at: number = Date.now()): Promise<CueResult> => {
@@ -218,9 +276,14 @@ export function useCueEngine(scenario: ClientScenario | null): CueEngineApi {
     setThreshold,
     mode,
     setMode,
+    reactionMs,
+    setReactionMs,
+    interimMatch,
+    setInterimMatch,
     log,
     semanticOk,
     evaluate,
+    evaluateInterim,
     markPlayed: markPlayedIdx,
     manualNext,
     skip,

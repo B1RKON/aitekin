@@ -5,7 +5,7 @@
  * Cikti: OYNAT (hangi replik) | BEKLE | YOKSAY (neden)
  */
 import type { CueMode, Line } from "./schema";
-import { cosine, fuzzyScore, sameText, tokens } from "./similarity";
+import { cosine, coverage, fuzzyScore, sameText, tokens } from "./similarity";
 
 export type Decision = "OYNAT" | "BEKLE" | "YOKSAY";
 
@@ -58,6 +58,37 @@ export const WINDOW_AHEAD = 2;
 export const MIN_CHARS = 8;
 export const SEM_WEIGHT = 0.75;
 export const MARGIN = 0.05;
+/** Ara sonuclar (oyuncu daha konusurken) icin en dusuk etkin bar */
+export const INTERIM_MIN_BAR = 0.7;
+/** Ara sonucta tetiklemek icin tetikleyicinin en az bu orani soylenmis olmali */
+export const INTERIM_MIN_COVERAGE = 0.85;
+
+/**
+ * Ara sonuc degerlendirmesinde kullanilacak esik.
+ * Ara metin yarim oldugu icin fuzzy skoru dogal olarak dusuktur; cumle tamamlandikca
+ * yukselir. Bariyeri yukseltmek, replik bitmeden tetiklenmeyi onler.
+ */
+export function interimThreshold(threshold: number): number {
+  return Math.max(threshold, INTERIM_MIN_BAR) + FUZZY_ONLY_PENALTY;
+}
+
+/**
+ * Oyuncu konusurken (Chrome'un ara sonuclari) yerel degerlendirme - ag cagrisi yok.
+ * Chrome bir cumleyi "kesinlesmis" saymak icin 1-2 saniye sessizlik bekler; bu fonksiyon
+ * o beklemeyi atlar. Yarim cumlede tetiklememek icin iki kapi var: yuksek esik + kapsama.
+ */
+export function scoreInterim(utt: string, lines: Line[], state: CueState, opts: CueOpts): CueResult {
+  const r = scoreCandidates(utt, null, lines, state, {
+    ...opts,
+    threshold: interimThreshold(opts.threshold),
+  });
+  if (r.decision !== "OYNAT" || r.lineIndex == null) return r;
+  const cov = coverage(utt, lines[r.lineIndex].tetikleyici);
+  if (cov < INTERIM_MIN_COVERAGE) {
+    return { ...r, decision: "BEKLE", lineIndex: null, reason: "yarim-cumle" };
+  }
+  return { ...r, reason: "hizli-eslesme" };
+}
 
 export function createInitialState(): CueState {
   return {

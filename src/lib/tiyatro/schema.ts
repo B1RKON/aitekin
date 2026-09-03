@@ -36,6 +36,10 @@ export interface ScenarioSettings {
   threshold: number;
   mode: CueMode;
   bridgeEnabled: boolean;
+  /** Eslesme ile konusma arasindaki gecikme (ms) - dogallik icin kucuk bir duraklama */
+  reactionMs: number;
+  /** Oyuncu konusurken ara sonuclari da degerlendir (cok daha hizli tepki) */
+  interimMatch: boolean;
 }
 
 export interface ScenarioInput {
@@ -73,7 +77,13 @@ export const ESNEKLIK_VALUES: Esneklik[] = ["dusuk", "orta", "yuksek"];
 export const CUE_MODES: CueMode[] = ["sirali", "serbest"];
 export const DEFAULT_VOICE = "tr-TR-Wavenet-B";
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = { speakingRate: 1, pitch: 0 };
-export const DEFAULT_SETTINGS: ScenarioSettings = { threshold: 0.62, mode: "sirali", bridgeEnabled: false };
+export const DEFAULT_SETTINGS: ScenarioSettings = {
+  threshold: 0.62,
+  mode: "sirali",
+  bridgeEnabled: false,
+  reactionMs: 250,
+  interimMatch: true,
+};
 export const EMBED_MODEL = "@cf/baai/bge-m3";
 export const EMBED_DIM = 1024;
 
@@ -166,6 +176,8 @@ export function validateScenarioInput(json: unknown): ValidationResult {
     threshold: num(ay.threshold, DEFAULT_SETTINGS.threshold, LIMITS.thresholdMin, LIMITS.thresholdMax),
     mode,
     bridgeEnabled: ay.bridgeEnabled === true,
+    reactionMs: Math.round(num(ay.reactionMs, DEFAULT_SETTINGS.reactionMs, 0, 2000)),
+    interimMatch: ay.interimMatch !== false,
   };
 
   const rawLines = Array.isArray(json.replikler) ? json.replikler : null;

@@ -6,6 +6,8 @@ export type SttState = "idle" | "listening" | "paused" | "error";
 export interface SpeechOptions {
   lang?: string;
   onFinal: (text: string, at: number) => void;
+  /** Oyuncu konusurken akan ara metin - hizli eslesme icin */
+  onInterim?: (text: string, at: number) => void;
 }
 
 export interface SpeechApi {
@@ -33,7 +35,7 @@ const DEDUPE_MS = 3000;
  * - network hatasinda ussel backoff; izin hatasinda durur
  * - watchdog: 90sn hic olay yoksa abort + restart
  */
-export function useSpeechRecognition({ lang = "tr-TR", onFinal }: SpeechOptions): SpeechApi {
+export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: SpeechOptions): SpeechApi {
   const [supported] = useState<boolean>(() => getSpeechRecognition() !== null);
   const [state, setState] = useState<SttState>("idle");
   const [interim, setInterim] = useState("");
@@ -48,10 +50,12 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal }: SpeechOptions)
   const lastEventRef = useRef(0);
   const lastFinalRef = useRef<{ text: string; at: number }>({ text: "", at: 0 });
   const onFinalRef = useRef(onFinal);
+  const onInterimRef = useRef(onInterim);
 
   useEffect(() => {
     onFinalRef.current = onFinal;
-  }, [onFinal]);
+    onInterimRef.current = onInterim;
+  }, [onFinal, onInterim]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -122,7 +126,9 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal }: SpeechOptions)
           interimText += text + " ";
         }
       }
-      setInterim(interimText.trim());
+      const trimmed = interimText.trim();
+      setInterim(trimmed);
+      if (trimmed && !pausedRef.current) onInterimRef.current?.(trimmed, Date.now());
     };
 
     rec.onerror = (ev) => {

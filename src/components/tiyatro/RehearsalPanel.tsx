@@ -203,6 +203,10 @@ export default function RehearsalPanel({ scenario }: { scenario: ClientScenario 
           setThreshold={engine.setThreshold}
           mode={engine.mode}
           setMode={engine.setMode}
+          reactionMs={engine.reactionMs}
+          setReactionMs={engine.setReactionMs}
+          interimMatch={engine.interimMatch}
+          setInterimMatch={engine.setInterimMatch}
         />
         <Panel title="Karar geçmişi">
           <DecisionLog log={engine.log} limit={8} />
