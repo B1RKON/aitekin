@@ -12,7 +12,8 @@ import StatusBadge, { type StageStatus } from "./StatusBadge";
 import MicMeter from "./MicMeter";
 import DecisionLog from "./DecisionLog";
 import SensitivityPanel from "./SensitivityPanel";
-import { Badge, BigButton, Panel } from "./ui";
+import { runSpeechSelfTest, type SpeechTestResult } from "@/lib/tiyatro/speechTest";
+import { Badge, BigButton, Panel, SmallButton } from "./ui";
 
 /** Oyuncu sustuktan sonra degerlendirmeye kadar beklenen sure */
 const PAUSE_MS = 600;
@@ -33,7 +34,10 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
   const [finals, setFinals] = useState<{ text: string; at: number }[]>([]);
   const [online, setOnline] = useState(true);
   const [micError, setMicError] = useState<string | null>(null);
-  const [meterOn, setMeterOn] = useState(true);
+  // Varsayilan KAPALI: ayri bir mikrofon akisi bazi sistemlerde konusma tanimayi engelliyor
+  const [meterOn, setMeterOn] = useState(false);
+  const [selfTest, setSelfTest] = useState<SpeechTestResult | null>(null);
+  const [testing, setTesting] = useState(false);
   // Canli tani: ne duyuldu, hangi replige kac puan verildi, neden tetiklenmedi
   const [live, setLive] = useState<{
     text: string;
@@ -199,6 +203,20 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
     void playLineRef.current(i);
   }, [engine]);
 
+  /** Sahne mantigindan bagimsiz 8 saniyelik konusma tanima testi */
+  const runTest = useCallback(async () => {
+    setTesting(true);
+    setSelfTest(null);
+    const wasRunning = runningRef.current;
+    if (wasRunning) sttRef.current.stop(); // iki tanima ornegi ayni anda calisamaz
+    try {
+      setSelfTest(await runSpeechSelfTest(8));
+    } finally {
+      setTesting(false);
+      if (wasRunning) sttRef.current.start();
+    }
+  }, []);
+
   const mute = useCallback(() => player.stop(), [player]);
   const resetAll = useCallback(() => {
     if (window.confirm("İlerleme sıfırlansın mı? (1. replikten başlar)")) {
@@ -330,7 +348,14 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
           {(stt.error || micError) && <p className="text-red-400 text-xs mt-2">{stt.error ?? micError}</p>}
         </Panel>
 
-        <Panel title="Tanı — neden tetiklemiyor?">
+        <Panel
+          title="Tanı — neden tetiklemiyor?"
+          right={
+            <SmallButton tone="cyan" onClick={runTest} disabled={testing}>
+              {testing ? "dinleniyor…" : "Mikrofon testi"}
+            </SmallButton>
+          }
+        >
           <dl className="grid grid-cols-[104px_1fr] gap-y-1.5 text-xs">
             <dt className="text-zinc-500">Mikrofon</dt>
             <dd className={counts.interim > 0 ? "text-neon-green" : "text-red-400"}>
@@ -339,6 +364,21 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
                 : running
                 ? "HİÇ SES ALINMIYOR — konuşma tanıma metin üretmiyor"
                 : "başlatılmadı"}
+            </dd>
+
+            <dt className="text-zinc-500">Tanıma motoru</dt>
+            <dd className={stt.state === "listening" ? "text-neon-green" : stt.state === "error" ? "text-red-400" : "text-neon-yellow"}>
+              {stt.state === "listening"
+                ? "dinliyor"
+                : stt.state === "paused"
+                ? "duraklatıldı (karakter konuşuyor)"
+                : stt.state === "error"
+                ? "hata"
+                : "kapalı"}
+              <span className="text-zinc-600">
+                {" "}
+                · {stt.diag.starts} başlatma, {stt.diag.results} sonuç, {stt.diag.rebuilds} yeniden kurulum
+              </span>
             </dd>
 
             <dt className="text-zinc-500">Duyulan</dt>
@@ -378,6 +418,38 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
                 : "BAŞLAT ile yüklenecek"}
             </dd>
           </dl>
+
+          {selfTest && (
+            <div className="mt-3 border border-zinc-800 rounded-lg p-3 bg-black/40 text-xs space-y-1">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Mikrofon testi sonucu</p>
+              {!selfTest.supported ? (
+                <p className="text-red-400">Bu tarayıcı konuşma tanımayı desteklemiyor. Google Chrome kullan.</p>
+              ) : (
+                <>
+                  <p className={selfTest.started ? "text-neon-green" : "text-red-400"}>
+                    {selfTest.started ? "✓ Motor başladı" : "✗ Motor hiç başlamadı"}
+                  </p>
+                  <p className={selfTest.audioStarted ? "text-neon-green" : "text-red-400"}>
+                    {selfTest.audioStarted
+                      ? "✓ Ses akışı açıldı"
+                      : "✗ Ses akışı açılmadı — mikrofonu başka bir uygulama tutuyor olabilir"}
+                  </p>
+                  <p className={selfTest.resultCount > 0 ? "text-neon-green" : "text-red-400"}>
+                    {selfTest.resultCount > 0
+                      ? `✓ ${selfTest.resultCount} sonuç · son duyulan: “${selfTest.transcript}”`
+                      : "✗ Hiç metin üretilmedi"}
+                  </p>
+                  {selfTest.error && <p className="text-red-400">Hata kodu: {selfTest.error}</p>}
+                  {selfTest.started && selfTest.audioStarted && selfTest.resultCount === 0 && (
+                    <p className="text-neon-yellow">
+                      Motor çalışıyor ama ses gelmiyor. Chrome ayarlarından site için seçili mikrofonu kontrol et:
+                      adres çubuğundaki kilit simgesi → Site ayarları → Mikrofon.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           <p className="text-[11px] text-zinc-600 mt-3 leading-relaxed">
             <span className="text-zinc-500">esik-alti</span> = cümle tanındı ama replikle yeterince eşleşmedi (eşiği düşür
             veya tetikleyiciyi düzelt). <span className="text-zinc-500">yarim-cumle</span> = daha bitirmedin, normal.{" "}

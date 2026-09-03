@@ -16,6 +16,8 @@ export interface SpeechApi {
   interim: string;
   error: string | null;
   lastEventAt: number;
+  /** Tani: kac kez baslatma denendi, kac sonuc geldi, kac kez yeniden kuruldu */
+  diag: { starts: number; results: number; rebuilds: number };
   start: () => void;
   stop: () => void;
   pause: () => void;
@@ -24,8 +26,10 @@ export interface SpeechApi {
 
 const RESTART_DELAY_MS = 250;
 const RESUME_DELAY_MS = 700;
-const WATCHDOG_INTERVAL_MS = 5000;
+const WATCHDOG_INTERVAL_MS = 2000;
 const WATCHDOG_STALL_MS = 90000;
+/** Baslatma denendi ama bu sure icinde "dinliyor" olunmadiysa nesneyi yeniden kur */
+const WATCHDOG_NOT_LISTENING_MS = 4000;
 const DEDUPE_MS = 3000;
 
 /**
@@ -41,6 +45,7 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [lastEventAt, setLastEventAt] = useState(0);
+  const [diag, setDiag] = useState({ starts: 0, results: 0, rebuilds: 0 });
 
   const recRef = useRef<SRInstance | null>(null);
   const wantRef = useRef(false);
@@ -48,6 +53,8 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
   const backoffRef = useRef(1000);
   const timerRef = useRef<number | null>(null);
   const lastEventRef = useRef(0);
+  const stateRef = useRef<SttState>("idle");
+  const startAttemptRef = useRef(0);
   const lastFinalRef = useRef<{ text: string; at: number }>({ text: "", at: 0 });
   const onFinalRef = useRef(onFinal);
   const onInterimRef = useRef(onInterim);
@@ -56,6 +63,11 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
     onFinalRef.current = onFinal;
     onInterimRef.current = onInterim;
   }, [onFinal, onInterim]);
+
+  const setSttState = useCallback((s: SttState) => {
+    stateRef.current = s;
+    setState(s);
+  }, []);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -67,6 +79,8 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
   const safeStart = useCallback(() => {
     const rec = recRef.current;
     if (!rec) return;
+    startAttemptRef.current = Date.now();
+    setDiag((d) => ({ ...d, starts: d.starts + 1 }));
     try {
       rec.start();
     } catch {
@@ -102,7 +116,7 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
     rec.onstart = () => {
       touch();
       backoffRef.current = 1000;
-      setState("listening");
+      setSttState("listening");
       setError(null);
     };
     rec.onaudiostart = touch;
@@ -115,6 +129,7 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
         const r = ev.results[i];
         const text = (r[0]?.transcript ?? "").trim();
         if (!text) continue;
+        setDiag((d) => ({ ...d, results: d.results + 1 }));
         if (r.isFinal) {
           const now = Date.now();
           const dup = lastFinalRef.current.text === text && now - lastFinalRef.current.at < DEDUPE_MS;
@@ -138,13 +153,13 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
       if (code === "not-allowed" || code === "service-not-allowed") {
         wantRef.current = false;
         setError("Mikrofon izni reddedildi. Adres cubugundaki kilit simgesinden izin verin.");
-        setState("error");
+        setSttState("error");
         return;
       }
       if (code === "audio-capture") {
         wantRef.current = false;
-        setError("Mikrofon bulunamadi.");
-        setState("error");
+        setError("Mikrofon bulunamadi ya da baska bir uygulama tarafindan kullaniliyor.");
+        setSttState("error");
         return;
       }
       if (code === "network") {
@@ -159,31 +174,32 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
       touch();
       setInterim("");
       if (!wantRef.current) {
-        setState("idle");
+        setSttState("idle");
         return;
       }
       if (pausedRef.current) {
-        setState("paused");
+        setSttState("paused");
         return;
       }
+      setSttState("idle");
       scheduleRestart(backoffRef.current > 1000 ? backoffRef.current : RESTART_DELAY_MS);
     };
 
     return rec;
-  }, [lang, scheduleRestart]);
+  }, [lang, scheduleRestart, setSttState]);
 
   const start = useCallback(() => {
     if (!recRef.current) recRef.current = build();
     if (!recRef.current) {
       setError("Bu tarayici konusma tanimayi desteklemiyor. Google Chrome kullanin.");
-      setState("error");
+      setSttState("error");
       return;
     }
     wantRef.current = true;
     pausedRef.current = false;
     setError(null);
     safeStart();
-  }, [build, safeStart]);
+  }, [build, safeStart, setSttState]);
 
   const stop = useCallback(() => {
     wantRef.current = false;
@@ -194,9 +210,9 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
     } catch {
       // yok say
     }
-    setState("idle");
+    setSttState("idle");
     setInterim("");
-  }, [clearTimer]);
+  }, [clearTimer, setSttState]);
 
   const pause = useCallback(() => {
     if (!wantRef.current) return;
@@ -207,9 +223,9 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
     } catch {
       // yok say
     }
-    setState("paused");
+    setSttState("paused");
     setInterim("");
-  }, [clearTimer]);
+  }, [clearTimer, setSttState]);
 
   const resume = useCallback(() => {
     if (!wantRef.current) return;
@@ -217,10 +233,41 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
     scheduleRestart(RESUME_DELAY_MS);
   }, [scheduleRestart]);
 
+  /**
+   * Konusma tanima nesnesini bastan kurar. Chrome bazen start() cagrisini sessizce
+   * yutar (onstart hic gelmez); tek kurtulus yolu yeni bir ornek olusturmak.
+   */
+  const rebuild = useCallback(() => {
+    try {
+      const old = recRef.current;
+      if (old) {
+        old.onstart = null;
+        old.onend = null;
+        old.onerror = null;
+        old.onresult = null;
+        old.abort();
+      }
+    } catch {
+      // yok say
+    }
+    recRef.current = build();
+    setDiag((d) => ({ ...d, rebuilds: d.rebuilds + 1 }));
+    if (recRef.current && wantRef.current && !pausedRef.current) safeStart();
+  }, [build, safeStart]);
+
   // Watchdog
   useEffect(() => {
     const id = window.setInterval(() => {
       if (!wantRef.current || pausedRef.current) return;
+      // start() cagrildi ama "dinliyor" durumuna hic gecilmediyse nesneyi yeniden kur
+      if (
+        stateRef.current !== "listening" &&
+        startAttemptRef.current > 0 &&
+        Date.now() - startAttemptRef.current > WATCHDOG_NOT_LISTENING_MS
+      ) {
+        rebuild();
+        return;
+      }
       if (Date.now() - lastEventRef.current > WATCHDOG_STALL_MS) {
         try {
           recRef.current?.abort();
@@ -232,7 +279,7 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
       }
     }, WATCHDOG_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [scheduleRestart]);
+  }, [scheduleRestart, rebuild]);
 
   // Unmount temizligi
   useEffect(() => {
@@ -247,5 +294,5 @@ export function useSpeechRecognition({ lang = "tr-TR", onFinal, onInterim }: Spe
     };
   }, [clearTimer]);
 
-  return { supported, state, interim, error, lastEventAt, start, stop, pause, resume };
+  return { supported, state, interim, error, lastEventAt, diag, start, stop, pause, resume };
 }
