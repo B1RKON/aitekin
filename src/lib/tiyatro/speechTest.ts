@@ -13,6 +13,8 @@ export interface SpeechTestResult {
   resultCount: number;
   transcript: string;
   error: string | null;
+  /** Google servisi sessizlik bildirdi - Chrome yanlis mikrofonu dinliyor olabilir */
+  noSpeech: boolean;
   durationMs: number;
 }
 
@@ -26,6 +28,7 @@ export function runSpeechSelfTest(seconds = 8, lang = "tr-TR"): Promise<SpeechTe
     resultCount: 0,
     transcript: "",
     error: null,
+    noSpeech: false,
     durationMs: 0,
   };
   if (!Ctor) return Promise.resolve(res);
@@ -34,10 +37,12 @@ export function runSpeechSelfTest(seconds = 8, lang = "tr-TR"): Promise<SpeechTe
     const rec = new Ctor();
     const t0 = Date.now();
     let done = false;
+    let closing = false;
 
     const finish = () => {
       if (done) return;
       done = true;
+      closing = true; // kendi abort'umuz hata olarak yazilmasin
       res.durationMs = Date.now() - t0;
       try {
         rec.abort();
@@ -71,6 +76,12 @@ export function runSpeechSelfTest(seconds = 8, lang = "tr-TR"): Promise<SpeechTe
       }
     };
     rec.onerror = (ev) => {
+      if (closing) return;
+      if (ev.error === "no-speech") {
+        res.noSpeech = true;
+        return;
+      }
+      if (ev.error === "aborted") return;
       res.error = String(ev.error);
       if (ev.error === "not-allowed" || ev.error === "service-not-allowed" || ev.error === "audio-capture") {
         finish();

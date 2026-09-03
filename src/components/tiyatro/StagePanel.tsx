@@ -6,6 +6,7 @@ import type { ClientScenario } from "@/lib/tiyatro/schema";
 import { COOLDOWN_MS } from "@/lib/tiyatro/cueEngine";
 import { useCueEngine } from "@/hooks/tiyatro/useCueEngine";
 import { useSpeechRecognition } from "@/hooks/tiyatro/useSpeechRecognition";
+import { useWhisperRecognition } from "@/hooks/tiyatro/useWhisperRecognition";
 import { useAudioPlayer } from "@/hooks/tiyatro/useAudioPlayer";
 import { useWakeLock } from "@/hooks/tiyatro/useWakeLock";
 import StatusBadge, { type StageStatus } from "./StatusBadge";
@@ -17,6 +18,17 @@ import { Badge, BigButton, Panel, SmallButton } from "./ui";
 
 /** Oyuncu sustuktan sonra degerlendirmeye kadar beklenen sure */
 const PAUSE_MS = 600;
+
+type SttEngine = "chrome" | "whisper";
+const ENGINE_KEY = "tiyatro:sttEngine";
+
+function initialEngine(): SttEngine {
+  try {
+    return window.localStorage.getItem(ENGINE_KEY) === "whisper" ? "whisper" : "chrome";
+  } catch {
+    return "chrome";
+  }
+}
 
 export default function StagePanel({ scenario, offline }: { scenario: ClientScenario; offline: boolean }) {
   const engine = useCueEngine(scenario);
@@ -38,6 +50,8 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
   const [meterOn, setMeterOn] = useState(false);
   const [selfTest, setSelfTest] = useState<SpeechTestResult | null>(null);
   const [testing, setTesting] = useState(false);
+  const [sttEngine, setSttEngine] = useState<SttEngine>("chrome");
+  useEffect(() => setSttEngine(initialEngine()), []);
   // Canli tani: ne duyuldu, hangi replige kac puan verildi, neden tetiklenmedi
   const [live, setLive] = useState<{
     text: string;
@@ -135,11 +149,33 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
     [engine.interimMatch, engine.evaluateInterim, engine.evaluatePause, clearPauseTimer] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const stt = useSpeechRecognition({ onFinal: handleFinal, onInterim: handleInterim });
+  // Iki motor da hazir bekler, sadece secili olan baslatilir.
+  const chromeStt = useSpeechRecognition({ onFinal: handleFinal, onInterim: handleInterim });
+  const whisperStt = useWhisperRecognition({ onFinal: handleFinal });
+  const stt = sttEngine === "whisper" ? whisperStt : chromeStt;
   const sttRef = useRef(stt);
   useEffect(() => {
     sttRef.current = stt;
   }, [stt]);
+
+  const switchEngine = useCallback(
+    (next: SttEngine) => {
+      if (next === sttEngine) return;
+      const wasRunning = runningRef.current;
+      chromeStt.stop();
+      whisperStt.stop();
+      setSttEngine(next);
+      try {
+        window.localStorage.setItem(ENGINE_KEY, next);
+      } catch {
+        // ozel mod
+      }
+      if (wasRunning) {
+        window.setTimeout(() => (next === "whisper" ? whisperStt : chromeStt).start(), 400);
+      }
+    },
+    [sttEngine, chromeStt, whisperStt]
+  );
 
   // Replik oynatma akisi: matched -> prelude (STT kapali) -> speaking -> cooldown -> listening
   useEffect(() => {
@@ -366,7 +402,21 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
                 : "başlatılmadı"}
             </dd>
 
-            <dt className="text-zinc-500">Tanıma motoru</dt>
+            <dt className="text-zinc-500">Motor</dt>
+            <dd className="text-zinc-200">
+              <span className={sttEngine === "whisper" ? "text-neon-purple" : "text-neon-cyan"}>
+                {sttEngine === "whisper" ? "Whisper (bizim sunucumuz)" : "Chrome konuşma tanıma"}
+              </span>
+              <button
+                type="button"
+                onClick={() => switchEngine(sttEngine === "whisper" ? "chrome" : "whisper")}
+                className="ml-2 underline text-zinc-500 hover:text-zinc-200"
+              >
+                diğerine geç
+              </button>
+            </dd>
+
+            <dt className="text-zinc-500">Durum</dt>
             <dd className={stt.state === "listening" ? "text-neon-green" : stt.state === "error" ? "text-red-400" : "text-neon-yellow"}>
               {stt.state === "listening"
                 ? "dinliyor"
@@ -439,12 +489,20 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
                       ? `✓ ${selfTest.resultCount} sonuç · son duyulan: “${selfTest.transcript}”`
                       : "✗ Hiç metin üretilmedi"}
                   </p>
+                  {selfTest.noSpeech && (
+                    <p className="text-neon-yellow">Google servisi “sessizlik” bildirdi — Chrome başka bir mikrofonu dinliyor.</p>
+                  )}
                   {selfTest.error && <p className="text-red-400">Hata kodu: {selfTest.error}</p>}
                   {selfTest.started && selfTest.audioStarted && selfTest.resultCount === 0 && (
-                    <p className="text-neon-yellow">
-                      Motor çalışıyor ama ses gelmiyor. Chrome ayarlarından site için seçili mikrofonu kontrol et:
-                      adres çubuğundaki kilit simgesi → Site ayarları → Mikrofon.
-                    </p>
+                    <div className="mt-2 border-t border-zinc-800 pt-2">
+                      <p className="text-neon-yellow">
+                        Chrome’un konuşma tanıması bu makinede metin üretmiyor. Ayarlarla uğraşma —{" "}
+                        <span className="text-zinc-300">Whisper motoruna geç</span>, mikrofonu doğrudan biz okuruz.
+                      </p>
+                      <SmallButton tone="purple" className="mt-2" onClick={() => switchEngine("whisper")}>
+                        Whisper motoruna geç
+                      </SmallButton>
+                    </div>
                   )}
                 </>
               )}
