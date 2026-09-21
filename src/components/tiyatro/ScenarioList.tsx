@@ -186,8 +186,11 @@ export default function ScenarioList({ onOpen, onEdit, onNew }: Props) {
                 <div>
                   <h3 className="text-lg font-bold text-zinc-100">{s.oyunAdi}</h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Karakter: <span className="text-neon-pink">{s.karakter}</span> · {s.replikSayisi} replik ·{" "}
-                    <span className="text-zinc-600">{s.sesModeli}</span>
+                    {s.karakterler?.length ? "Karakterler" : "Karakter"}:{" "}
+                    <span className="text-neon-pink">
+                      {s.karakterler?.length ? s.karakterler.join(", ") : s.karakter}
+                    </span>{" "}
+                    · {s.replikSayisi} replik
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge tone={allReady ? "green" : "yellow"}>

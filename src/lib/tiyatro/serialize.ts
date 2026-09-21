@@ -4,10 +4,13 @@
 import type { ClientLine, ClientScenario, Line, Scenario, ScenarioSummary } from "./schema";
 import { lineHash } from "./hash";
 import { signedUrls } from "./storage";
-import { voiceKey } from "./tts";
+import { profilImzasi } from "./tts";
+import { replikProfili } from "./schema";
 
 export function currentHash(s: Scenario, l: Line): string {
-  return lineHash(l.yanit, voiceKey(s.sesModeli), s.sesAyar.speakingRate, s.sesAyar.pitch);
+  const profil = replikProfili(s, l);
+  if (!profil) return "";
+  return lineHash(l.yanit, profilImzasi(profil, l.duygu));
 }
 
 export function isAudioReady(s: Scenario, l: Line): boolean {
@@ -40,7 +43,7 @@ export function toSummary(s: Scenario): ScenarioSummary {
     id: s.id,
     oyunAdi: s.oyunAdi,
     karakter: s.karakter,
-    sesModeli: s.sesModeli,
+    karakterler: (s.profiller ?? []).map((p) => p.ad),
     replikSayisi: s.replikler.length,
     audioReadySayisi: s.replikler.filter((l) => isAudioReady(s, l)).length,
     updatedAt: s.updatedAt ?? "",

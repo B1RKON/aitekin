@@ -4,7 +4,8 @@ import { isTiyatroAuthorized, unauthorizedResponse } from "@/lib/tiyatro/auth";
 import { SLUG_RE, type Line } from "@/lib/tiyatro/schema";
 import { getScenarioRow, updateLines } from "@/lib/tiyatro/db";
 import { removePaths, uploadAudio } from "@/lib/tiyatro/storage";
-import { synthesize, voiceKey } from "@/lib/tiyatro/tts";
+import { profilImzasi, synthesizeProfile } from "@/lib/tiyatro/tts";
+import { replikProfili } from "@/lib/tiyatro/schema";
 import { audioPathFor, lineHash } from "@/lib/tiyatro/hash";
 import { handleError } from "../../../_shared";
 
@@ -40,9 +41,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const s = await getScenarioRow(id);
     if (!s) return NextResponse.json({ error: "Senaryo bulunamadi." }, { status: 404 });
 
-    const voice = s.sesModeli;
-    const { speakingRate, pitch } = s.sesAyar;
-    const hashOf = (l: Line) => lineHash(l.yanit, voiceKey(voice), speakingRate, pitch);
+    // Her replik kendi karakter profili ve duygu kanaliyla seslendirilir
+    const hashOf = (l: Line) => {
+      const p = replikProfili(s, l);
+      return p ? lineHash(l.yanit, profilImzasi(p, l.duygu)) : "";
+    };
 
     let lines: Line[] = s.replikler.map((l) => ({ ...l }));
     if (force) {
@@ -70,7 +73,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
               failed.push(l.sira);
               return;
             }
-            const buf = await synthesize({ text: l.yanit, voice, speakingRate, pitch });
+            const profil = replikProfili(s, l);
+            if (!profil) {
+              failed.push(l.sira);
+              return;
+            }
+            const buf = await synthesizeProfile({ text: l.yanit, profil, duygu: l.duygu });
             const hash = hashOf(l);
             const path = audioPathFor(id, l.sira, hash);
             await uploadAudio(path, buf);

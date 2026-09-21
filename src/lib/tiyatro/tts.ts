@@ -1,10 +1,30 @@
 /**
  * TTS saglayici secimi (server-only): ELEVENLABS_API_KEY varsa ElevenLabs, yoksa GOOGLE_TTS_API_KEY varsa Google.
  * Ikisi de yoksa TiyatroConfigError -> istemci tarayici sesine (speechSynthesis) duser.
+ *
+ * Seslendirme hedefi karakter profilinden cozulur: hangi ses, hangi model, hangi duygu.
  */
 import { TiyatroConfigError } from "./errors";
 import { listVoices as googleListVoices, synthesize as googleSynthesize } from "./googleTts";
-import { elLabel, elListVoices, elModelId, elQuota, elSynthesize, type ElQuota } from "./elevenLabs";
+import {
+  elLabel,
+  elListModels,
+  elListVoices,
+  elModelId,
+  elQuota,
+  elSynthesize,
+  type ElModel,
+  type ElQuota,
+} from "./elevenLabs";
+import {
+  SPEED_MAX,
+  SPEED_MIN,
+  VARSAYILAN_DUYGU,
+  cozProfil,
+  sesImzasi,
+  type ResolvedVoice,
+  type VoiceProfile,
+} from "./voiceProfile";
 
 export type TtsProvider = "elevenlabs" | "google";
 
@@ -12,15 +32,19 @@ export interface VoiceInfo {
   id: string;
   label: string;
   gender: string;
+  /** Turkce icin uygun isaretlenmis ses (ElevenLabs etiketlerinden) */
+  turkce: boolean;
+  onizlemeUrl?: string;
 }
 
 export interface VoiceCatalog {
   provider: TtsProvider;
   voices: VoiceInfo[];
+  models: ElModel[];
   defaultVoice: string | null;
+  defaultModel: string;
   quota: ElQuota | null;
-  modelId: string;
-  supportsPitch: boolean;
+  /** Duygu kanallarinda hiz ayari destegi */
   speedRange: [number, number];
 }
 
@@ -42,33 +66,49 @@ export function isGoogleVoice(name: string): boolean {
   return name.startsWith("tr-TR-");
 }
 
-/** Ses dosyasi hash'ine giren anahtar: saglayici/model/ses degisince yeniden uretim tetiklenir */
-export function voiceKey(sesModeli: string): string {
+/**
+ * Ses dosyasi hash'ine giren imza (senkron, yalnizca saklanan veriye bakar).
+ * Profil, model, duygu ayari veya saglayici degisince imza degisir ve ses yeniden uretilir.
+ */
+export function profilImzasi(profil: VoiceProfile, duygu: string = VARSAYILAN_DUYGU): string {
   const p = activeProvider() ?? "none";
-  const model = p === "elevenlabs" ? elModelId() : "google";
-  return `${p}:${model}:${sesModeli}`;
+  return `${p}:${sesImzasi(cozProfil(profil, duygu))}`;
 }
 
-/** Senaryodaki ses adini aktif saglayicida gecerli bir sese cevirir */
-export async function resolveVoice(sesModeli: string): Promise<string> {
-  const p = requireProvider();
-  if (p === "google") return isGoogleVoice(sesModeli) ? sesModeli : GOOGLE_DEFAULT;
-  if (!isGoogleVoice(sesModeli)) return sesModeli;
-  const voices = await elListVoices();
-  if (!voices.length) throw new Error("ElevenLabs hesabinda kullanilabilir ses bulunamadi.");
-  return voices[0].voice_id;
+/** Profilin sesini aktif saglayicida gecerli bir sese cevirir (gerekirse yedege duser) */
+async function hedefiCoz(profil: VoiceProfile, duygu: string): Promise<ResolvedVoice> {
+  const provider = requireProvider();
+  const hedef = cozProfil(profil, duygu);
+
+  if (provider === "google") {
+    hedef.voiceId = isGoogleVoice(hedef.voiceId) ? hedef.voiceId : GOOGLE_DEFAULT;
+    return hedef;
+  }
+  if (!hedef.voiceId || isGoogleVoice(hedef.voiceId)) {
+    const voices = await elListVoices();
+    if (!voices.length) throw new Error("ElevenLabs hesabinda kullanilabilir ses bulunamadi.");
+    hedef.voiceId = voices[0].voice_id;
+  }
+  return hedef;
 }
 
-export async function synthesize(p: {
+/** Karakter profiliyle seslendirir */
+export async function synthesizeProfile(p: {
   text: string;
-  voice: string;
-  speakingRate: number;
-  pitch: number;
+  profil: VoiceProfile;
+  duygu?: string;
 }): Promise<Buffer> {
   const provider = requireProvider();
-  const voice = await resolveVoice(p.voice);
-  if (provider === "google") return googleSynthesize({ ...p, voice });
-  return elSynthesize({ text: p.text, voiceId: voice, speakingRate: p.speakingRate });
+  const hedef = await hedefiCoz(p.profil, p.duygu ?? VARSAYILAN_DUYGU);
+  if (provider === "google") {
+    return googleSynthesize({
+      text: p.text,
+      voice: hedef.voiceId,
+      speakingRate: hedef.ayarlar.speed,
+      pitch: 0,
+    });
+  }
+  return elSynthesize({ text: p.text, hedef });
 }
 
 function genderTr(g: string): string {
@@ -78,28 +118,52 @@ function genderTr(g: string): string {
   return "nötr";
 }
 
+/** ElevenLabs etiketlerinden sesin Turkce'ye uygunlugunu tahmin eder */
+function turkceMi(v: { labels?: Record<string, string>; name: string }): boolean {
+  const l = v.labels ?? {};
+  const dil = `${l.language ?? ""} ${l.accent ?? ""}`.toLowerCase();
+  if (dil.includes("tr") || dil.includes("turk")) return true;
+  return /turk|türk/i.test(v.name);
+}
+
 export async function voiceCatalog(): Promise<VoiceCatalog> {
   const provider = requireProvider();
   if (provider === "google") {
     const v = await googleListVoices();
     return {
       provider,
-      voices: v.map((x) => ({ id: x.name, label: `${x.name} (${genderTr(x.gender)})`, gender: x.gender })),
+      voices: v.map((x) => ({
+        id: x.name,
+        label: `${x.name} (${genderTr(x.gender)})`,
+        gender: x.gender,
+        turkce: true,
+      })),
+      models: [],
       defaultVoice: v.find((x) => x.name === GOOGLE_DEFAULT)?.name ?? v[0]?.name ?? null,
+      defaultModel: "google",
       quota: null,
-      modelId: "google",
-      supportsPitch: true,
       speedRange: [0.5, 2],
     };
   }
-  const [voices, quota] = await Promise.all([elListVoices(), elQuota()]);
+
+  const [voices, models, quota] = await Promise.all([
+    elListVoices(),
+    elListModels().catch(() => [] as ElModel[]),
+    elQuota(),
+  ]);
   return {
     provider,
-    voices: voices.map((v) => ({ id: v.voice_id, label: elLabel(v), gender: v.labels?.gender ?? "" })),
-    defaultVoice: voices[0]?.voice_id ?? null,
+    voices: voices.map((v) => ({
+      id: v.voice_id,
+      label: elLabel(v),
+      gender: v.labels?.gender ?? "",
+      turkce: turkceMi(v),
+      onizlemeUrl: v.preview_url,
+    })),
+    models,
+    defaultVoice: voices.find((v) => turkceMi(v))?.voice_id ?? voices[0]?.voice_id ?? null,
+    defaultModel: elModelId(),
     quota,
-    modelId: elModelId(),
-    supportsPitch: false,
-    speedRange: [0.7, 1.2],
+    speedRange: [SPEED_MIN, SPEED_MAX],
   };
 }

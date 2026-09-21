@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Play, Plus, Trash2, ArrowUp, ArrowDown, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, ArrowUp, ArrowDown, Save } from "lucide-react";
 import type { ClientScenario, Esneklik, LineInput, ScenarioInput } from "@/lib/tiyatro/schema";
 import {
   DEFAULT_SETTINGS,
-  DEFAULT_VOICE,
-  DEFAULT_VOICE_SETTINGS,
   ESNEKLIK_VALUES,
   slugify,
   toScenarioInput,
   validateScenarioInput,
 } from "@/lib/tiyatro/schema";
+import { VARSAYILAN_DUYGU, bosProfil, duyguSirasi, type VoiceProfile } from "@/lib/tiyatro/voiceProfile";
+import VoiceProfilePanel from "./VoiceProfilePanel";
 import { ApiError, tiyatroApi, type AudioGenResult, type VoiceCatalog } from "@/lib/tiyatro/api.client";
-import { useAudioPlayer } from "@/hooks/tiyatro/useAudioPlayer";
 import * as cache from "@/lib/tiyatro/localCache";
 import { Badge, BigButton, Field, Panel, SmallButton, inputCls } from "./ui";
 
@@ -26,14 +25,16 @@ interface Props {
 }
 
 function blankInput(): ScenarioInput {
+  const p = { ...bosProfil("Karakter"), id: "karakter" };
   return {
     id: "",
     oyunAdi: "",
     karakter: "",
-    sesModeli: DEFAULT_VOICE,
-    sesAyar: { ...DEFAULT_VOICE_SETTINGS },
+    profiller: [p],
     ayarlar: { ...DEFAULT_SETTINGS },
-    replikler: [{ sira: 1, tetikleyici: "", yanit: "", esneklik: "dusuk" }],
+    replikler: [
+      { sira: 1, tetikleyici: "", yanit: "", esneklik: "dusuk", profil: p.id, duygu: VARSAYILAN_DUYGU },
+    ],
   };
 }
 
@@ -47,12 +48,10 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
   const [voicesErr, setVoicesErr] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [previewing, setPreviewing] = useState(false);
   const [saved, setSaved] = useState<ClientScenario | null>(initial);
   const [gen, setGen] = useState<AudioGenResult | null>(null);
   const [generating, setGenerating] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const player = useAudioPlayer();
 
   useEffect(() => {
     let alive = true;
@@ -61,15 +60,19 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
       .then((c) => {
         if (!alive) return;
         setCatalog(c);
-        // Senaryodaki ses aktif saglayicida yoksa varsayilana cek; hiz/ton araligini saglayiciya uydur
-        setForm((f) => {
-          const known = c.voices.some((v) => v.id === f.sesModeli);
-          const sesModeli = known || !c.defaultVoice ? f.sesModeli : c.defaultVoice;
-          const [lo, hi] = c.speedRange;
-          const speakingRate = Math.min(hi, Math.max(lo, f.sesAyar.speakingRate));
-          const pitch = c.supportsPitch ? f.sesAyar.pitch : 0;
-          return { ...f, sesModeli, sesAyar: { speakingRate, pitch } };
-        });
+        // Profillerdeki ses aktif saglayicida yoksa varsayilana cek, hizi araliga sikistir
+        setForm((f) => ({
+          ...f,
+          profiller: f.profiller.map((p) => {
+            const known = c.voices.some((v) => v.id === p.voiceId);
+            const voiceId = known || !c.defaultVoice ? p.voiceId : c.defaultVoice;
+            const [lo, hi] = c.speedRange;
+            const duygular = Object.fromEntries(
+              Object.entries(p.duygular).map(([k, d]) => [k, { ...d, speed: Math.min(hi, Math.max(lo, d.speed)) }])
+            );
+            return { ...p, voiceId, duygular };
+          }),
+        }));
       })
       .catch((e) => {
         if (!alive) return;
@@ -81,11 +84,6 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
     };
   }, []);
 
-  const providerLabel = catalog?.provider === "elevenlabs" ? "ElevenLabs" : catalog?.provider === "google" ? "Google TTS" : null;
-  const quotaLabel =
-    catalog?.quota && catalog.quota.limit > 0
-      ? ` · kota ${catalog.quota.used.toLocaleString("tr-TR")}/${catalog.quota.limit.toLocaleString("tr-TR")}`
-      : "";
 
   const set = <K extends keyof ScenarioInput>(k: K, v: ScenarioInput[K]) => setForm((f) => ({ ...f, [k]: v }));
   const setLine = (i: number, patch: Partial<LineInput>) =>
@@ -93,7 +91,17 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
   const addLine = () =>
     setForm((f) => ({
       ...f,
-      replikler: [...f.replikler, { sira: f.replikler.length + 1, tetikleyici: "", yanit: "", esneklik: "dusuk" }],
+      replikler: [
+        ...f.replikler,
+        {
+          sira: f.replikler.length + 1,
+          tetikleyici: "",
+          yanit: "",
+          esneklik: "dusuk",
+          profil: f.replikler[f.replikler.length - 1]?.profil ?? f.profiller[0]?.id ?? "",
+          duygu: VARSAYILAN_DUYGU,
+        },
+      ],
     }));
   const removeLine = (i: number) =>
     setForm((f) => ({ ...f, replikler: f.replikler.filter((_, j) => j !== i).map((l, j) => ({ ...l, sira: j + 1 })) }));
@@ -106,19 +114,17 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
       return { ...f, replikler: arr.map((l, k) => ({ ...l, sira: k + 1 })) };
     });
 
-  const preview = async () => {
-    setPreviewing(true);
-    setMsg(null);
-    try {
-      const text = form.replikler.find((l) => l.yanit.trim())?.yanit.slice(0, 300) || "Merhaba. Ben sahnedeki yapay zekâ karakteriyim.";
-      const blob = await tiyatroApi.ttsPreview(text, form.sesModeli, form.sesAyar.speakingRate, form.sesAyar.pitch);
-      await player.playBlob(blob);
-    } catch (e) {
-      setMsg(e instanceof ApiError ? e.message : "Önizleme başarısız.");
-    } finally {
-      setPreviewing(false);
-    }
-  };
+  /** Karakter adi degisince profil kimligi sabit kalir; ad senaryo basligina yansir */
+  const setProfiller = (profiller: VoiceProfile[]) =>
+    setForm((f) => {
+      const idler = profiller.map((p) => p.id);
+      return {
+        ...f,
+        profiller,
+        karakter: profiller[0]?.ad || f.karakter,
+        replikler: f.replikler.map((l) => (idler.includes(l.profil) ? l : { ...l, profil: idler[0] ?? "" })),
+      };
+    });
 
   const save = async () => {
     setErrors([]);
@@ -202,71 +208,13 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
         </div>
       </Panel>
 
-      <Panel
-        title="Ses"
-        right={
-          providerLabel ? (
-            <Badge tone={catalog?.provider === "elevenlabs" ? "purple" : "cyan"}>
-              {providerLabel}
-              {quotaLabel}
-            </Badge>
-          ) : null
-        }
-      >
-        <div className="grid md:grid-cols-4 gap-4 items-end">
-          <Field
-            label="Ses modeli"
-            hint={voicesErr ?? (catalog ? `${catalog.voices.length} ses · ${catalog.modelId}` : "yükleniyor…")}
-          >
-            {catalog && catalog.voices.length > 0 ? (
-              <select className={inputCls} value={form.sesModeli} onChange={(e) => set("sesModeli", e.target.value)}>
-                {!catalog.voices.some((v) => v.id === form.sesModeli) && (
-                  <option value={form.sesModeli}>{form.sesModeli}</option>
-                )}
-                {catalog.voices.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input className={inputCls} value={form.sesModeli} onChange={(e) => set("sesModeli", e.target.value)} />
-            )}
-          </Field>
-          <Field
-            label={`Hız ${form.sesAyar.speakingRate.toFixed(2)}`}
-            hint={catalog ? `${catalog.speedRange[0]} – ${catalog.speedRange[1]}` : undefined}
-          >
-            <input
-              type="range"
-              min={catalog?.speedRange[0] ?? 0.5}
-              max={catalog?.speedRange[1] ?? 2}
-              step={0.05}
-              value={form.sesAyar.speakingRate}
-              onChange={(e) => set("sesAyar", { ...form.sesAyar, speakingRate: Number(e.target.value) })}
-              className="w-full accent-[#FF0080]"
-            />
-          </Field>
-          <Field
-            label={`Ton ${form.sesAyar.pitch > 0 ? "+" : ""}${form.sesAyar.pitch}`}
-            hint={catalog && !catalog.supportsPitch ? "Bu sağlayıcıda ton ayarı yok" : "Chirp seslerinde yok sayılır"}
-          >
-            <input
-              type="range"
-              min={-10}
-              max={10}
-              step={1}
-              value={form.sesAyar.pitch}
-              disabled={!!catalog && !catalog.supportsPitch}
-              onChange={(e) => set("sesAyar", { ...form.sesAyar, pitch: Number(e.target.value) })}
-              className="w-full accent-[#FF0080] disabled:opacity-30"
-            />
-          </Field>
-          <SmallButton tone="cyan" onClick={preview} disabled={previewing || player.isSpeaking} className="h-10">
-            {previewing ? <Loader2 className="animate-spin inline" size={14} /> : <Play size={14} className="inline -mt-0.5 mr-1" />} Sesi Dinle
-          </SmallButton>
-        </div>
-      </Panel>
+      <VoiceProfilePanel
+        profiller={form.profiller}
+        onChange={setProfiller}
+        catalog={catalog}
+        catalogError={voicesErr}
+        denemeMetni={form.replikler.find((l) => l.yanit.trim())?.yanit.slice(0, 300) ?? ""}
+      />
 
       <Panel title="Eşleştirme ayarları">
         <div className="grid md:grid-cols-3 gap-4">
@@ -324,6 +272,30 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
                     {savedLine?.audioReady ? <Badge tone="green">ses hazır</Badge> : <Badge tone="gray">ses yok</Badge>}
                   </div>
                   <div className="flex items-center gap-1">
+                    <select
+                      className="bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-neon-pink"
+                      value={l.profil}
+                      onChange={(e) => setLine(i, { profil: e.target.value, duygu: VARSAYILAN_DUYGU })}
+                      title="Bu repliği hangi karakter söyler"
+                    >
+                      {form.profiller.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.ad || "(adsız)"}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-neon-purple"
+                      value={l.duygu}
+                      onChange={(e) => setLine(i, { duygu: e.target.value })}
+                      title="Hangi duyguyla söyler"
+                    >
+                      {duyguSirasi(form.profiller.find((p) => p.id === l.profil)?.duygular ?? {}).map((k) => (
+                        <option key={k} value={k}>
+                          {form.profiller.find((p) => p.id === l.profil)?.duygular[k]?.ad ?? k}
+                        </option>
+                      ))}
+                    </select>
                     <select
                       className="bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300"
                       value={l.esneklik}

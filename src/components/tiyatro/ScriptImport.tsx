@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { FileText, Upload, Wand2 } from "lucide-react";
 import type { ScenarioInput } from "@/lib/tiyatro/schema";
-import { DEFAULT_SETTINGS, DEFAULT_VOICE, DEFAULT_VOICE_SETTINGS, slugify } from "@/lib/tiyatro/schema";
+import { DEFAULT_SETTINGS, slugify } from "@/lib/tiyatro/schema";
+import { VARSAYILAN_DUYGU, bosProfil, profilKimligi } from "@/lib/tiyatro/voiceProfile";
 import { buildReplikler, parseScript, type ParsedScript } from "@/lib/tiyatro/parseScript";
 import { Badge, BigButton, Field, Panel, SmallButton, inputCls } from "./ui";
 
@@ -66,14 +67,17 @@ export default function ScriptImport({ onImport }: { onImport: (input: ScenarioI
   const transfer = () => {
     if (!build || !build.replikler.length) return;
     const ad = oyunAdi.trim() || "Adsız Oyun";
+    const karakterAdi = karakter.trim();
+    // Ice aktarilan oyun tek yapay zeka karakteri icerir; sesi Duzenle sekmesinde secilir
+    const profil = bosProfil(karakterAdi || "Karakter");
+    profil.id = profilKimligi(karakterAdi || "karakter");
     const input: ScenarioInput = {
       id: slugify(ad),
       oyunAdi: ad,
-      karakter: karakter.trim(),
-      sesModeli: DEFAULT_VOICE,
-      sesAyar: { ...DEFAULT_VOICE_SETTINGS },
+      karakter: karakterAdi,
+      profiller: [profil],
       ayarlar: { ...DEFAULT_SETTINGS },
-      replikler: build.replikler,
+      replikler: build.replikler.map((l) => ({ ...l, profil: profil.id, duygu: VARSAYILAN_DUYGU })),
     };
     onImport(input);
   };

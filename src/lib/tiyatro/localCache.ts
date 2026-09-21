@@ -3,6 +3,7 @@
  * son senaryolar buradan acilir. Signed URL'ler saklanmaz (suresi dolar).
  */
 import type { ClientScenario, ScenarioSettings } from "./schema";
+import { migrateScenario } from "./schema";
 
 const PREFIX = "tiyatro:";
 const LRU_KEY = `${PREFIX}lru`;
@@ -62,7 +63,9 @@ export function saveScenario(s: ClientScenario): void {
 }
 
 export function loadScenario(id: string): ClientScenario | null {
-  return readJson<ClientScenario>(`${PREFIX}scenario:${id}`);
+  const s = readJson<ClientScenario>(`${PREFIX}scenario:${id}`);
+  // Eski surumde kaydedilmis onbellek tek sesli olabilir -> profile cevir
+  return s ? migrateScenario(s) : null;
 }
 
 export function removeScenario(id: string): void {

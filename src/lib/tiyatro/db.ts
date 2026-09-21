@@ -2,7 +2,8 @@
  * Supabase - tiyatro_scenarios tablosu (service role)
  */
 import type { Line, Scenario, ScenarioSettings, VoiceSettings } from "./schema";
-import { DEFAULT_SETTINGS, DEFAULT_VOICE_SETTINGS } from "./schema";
+import { DEFAULT_SETTINGS, migrateScenario } from "./schema";
+import type { VoiceProfile } from "./voiceProfile";
 import { requireService } from "./storage";
 
 const TABLE = "tiyatro_scenarios";
@@ -11,28 +12,32 @@ interface Row {
   id: string;
   oyun_adi: string;
   karakter: string;
-  ses_modeli: string;
-  ses_ayar: VoiceSettings | null;
+  profiller: VoiceProfile[] | null;
   ayarlar: ScenarioSettings | null;
   replikler: Line[] | null;
   embed_model: string | null;
   created_at: string;
   updated_at: string;
+  /** Eski tek sesli kayitlar; okurken profile donusturulur */
+  ses_modeli?: string | null;
+  ses_ayar?: VoiceSettings | null;
 }
 
 export function rowToScenario(r: Row): Scenario {
-  return {
+  // Eski kayitlarda `profiller` bos olabilir -> sesModeli/sesAyar'dan profil uretilir
+  return migrateScenario({
     id: r.id,
     oyunAdi: r.oyun_adi,
     karakter: r.karakter,
-    sesModeli: r.ses_modeli,
-    sesAyar: { ...DEFAULT_VOICE_SETTINGS, ...(r.ses_ayar ?? {}) },
+    profiller: Array.isArray(r.profiller) ? r.profiller : [],
     ayarlar: { ...DEFAULT_SETTINGS, ...(r.ayarlar ?? {}) },
     replikler: Array.isArray(r.replikler) ? r.replikler : [],
     embedModel: r.embed_model,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
-  };
+    sesModeli: r.ses_modeli ?? undefined,
+    sesAyar: r.ses_ayar ?? undefined,
+  });
 }
 
 function scenarioToRow(s: Scenario): Omit<Row, "created_at" | "updated_at"> {
@@ -40,8 +45,7 @@ function scenarioToRow(s: Scenario): Omit<Row, "created_at" | "updated_at"> {
     id: s.id,
     oyun_adi: s.oyunAdi,
     karakter: s.karakter,
-    ses_modeli: s.sesModeli,
-    ses_ayar: s.sesAyar,
+    profiller: s.profiller,
     ayarlar: s.ayarlar,
     replikler: s.replikler,
     embed_model: s.embedModel ?? null,

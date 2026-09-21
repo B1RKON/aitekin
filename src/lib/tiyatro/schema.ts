@@ -4,6 +4,22 @@
  * Kritik kural: `yanit` metni ASLA LLM tarafindan yeniden yazilmaz, birebir seslendirilir.
  */
 
+import {
+  VARSAYILAN_DUYGU,
+  VARSAYILAN_DUYGULAR,
+  VARSAYILAN_MODEL,
+  VARSAYILAN_TEMEL,
+  bosProfil,
+  benzersizKimlik,
+  profilKimligi,
+  SPEED_MAX,
+  SPEED_MIN,
+  type Emotion,
+  type VoiceProfile,
+} from "./voiceProfile";
+
+export type { Emotion, VoiceProfile } from "./voiceProfile";
+
 export type Esneklik = "dusuk" | "orta" | "yuksek";
 export type CueMode = "sirali" | "serbest";
 
@@ -12,6 +28,10 @@ export interface LineInput {
   tetikleyici: string;
   yanit: string;
   esneklik: Esneklik;
+  /** Bu repligi hangi karakter soyler (profil kimligi) */
+  profil: string;
+  /** Hangi duygu kanaliyla soyler */
+  duygu: string;
 }
 
 /** DB'de saklanan replik (server-owned alanlar dahil) */
@@ -45,11 +65,16 @@ export interface ScenarioSettings {
 export interface ScenarioInput {
   id: string;
   oyunAdi: string;
+  /** Ana karakterin adi (ozet ve baslik icin). Profiller `profiller` icindedir. */
   karakter: string;
-  sesModeli: string;
-  sesAyar: VoiceSettings;
+  /** Oyundaki yapay zeka karakterlerinin ses profilleri */
+  profiller: VoiceProfile[];
   ayarlar: ScenarioSettings;
   replikler: LineInput[];
+  /** @deprecated tek sesli eski kayitlar icin; okurken profile donusturulur */
+  sesModeli?: string;
+  /** @deprecated tek sesli eski kayitlar icin */
+  sesAyar?: VoiceSettings;
 }
 
 export interface Scenario extends Omit<ScenarioInput, "replikler"> {
@@ -67,7 +92,8 @@ export interface ScenarioSummary {
   id: string;
   oyunAdi: string;
   karakter: string;
-  sesModeli: string;
+  /** Oyundaki karakter adlari */
+  karakterler: string[];
   replikSayisi: number;
   audioReadySayisi: number;
   updatedAt: string;
@@ -161,14 +187,15 @@ export function validateScenarioInput(json: unknown): ValidationResult {
   const id = slugify(rawId || oyunAdi || "senaryo");
   if (!SLUG_RE.test(id)) errors.push("id gecersiz (kucuk harf, rakam ve tire).");
 
-  const sesModeli = str(json.sesModeli) || DEFAULT_VOICE;
-  if (!VOICE_RE.test(sesModeli)) errors.push("sesModeli gecersiz (tr-TR-... bekleniyor).");
+  // Ses profilleri. Eski tek sesli kayitlarda `profiller` yoktur; sesModeli/sesAyar'dan uretilir.
+  const rawProfiller = Array.isArray(json.profiller) ? json.profiller : null;
+  const profiller: VoiceProfile[] =
+    rawProfiller && rawProfiller.length
+      ? normalizeProfiller(rawProfiller, errors)
+      : [eskiKayittanProfil(str(json.sesModeli), isObj(json.sesAyar) ? json.sesAyar : {}, karakter)];
 
-  const sa = isObj(json.sesAyar) ? json.sesAyar : {};
-  const sesAyar: VoiceSettings = {
-    speakingRate: num(sa.speakingRate, DEFAULT_VOICE_SETTINGS.speakingRate, 0.5, 2),
-    pitch: num(sa.pitch, DEFAULT_VOICE_SETTINGS.pitch, -10, 10),
-  };
+  if (!profiller.length) errors.push("En az bir karakter ses profili olmali.");
+  const profilIdleri = profiller.map((p) => p.id);
 
   const ay = isObj(json.ayarlar) ? json.ayarlar : {};
   const mode = CUE_MODES.includes(ay.mode as CueMode) ? (ay.mode as CueMode) : DEFAULT_SETTINGS.mode;
@@ -200,7 +227,15 @@ export function validateScenarioInput(json: unknown): ValidationResult {
     const esneklik = ESNEKLIK_VALUES.includes(raw.esneklik as Esneklik) ? (raw.esneklik as Esneklik) : "dusuk";
     const siraRaw = typeof raw.sira === "number" ? raw.sira : Number(raw.sira);
     const sira = Number.isInteger(siraRaw) && siraRaw > 0 ? siraRaw : i + 1;
-    lines.push({ sira, tetikleyici, yanit, esneklik });
+
+    // Profil ve duygu: gecersizse ilk profile / notr'e duser (replik kaybolmasin)
+    const istenenProfil = str(raw.profil) ?? "";
+    const profil = profilIdleri.includes(istenenProfil) ? istenenProfil : profilIdleri[0] ?? "";
+    const p = profiller.find((x) => x.id === profil);
+    const istenenDuygu = str(raw.duygu) ?? "";
+    const duygu = p && istenenDuygu && istenenDuygu in p.duygular ? istenenDuygu : VARSAYILAN_DUYGU;
+
+    lines.push({ sira, tetikleyici, yanit, esneklik, profil, duygu });
   });
 
   lines.sort((a, b) => a.sira - b.sira);
@@ -209,7 +244,82 @@ export function validateScenarioInput(json: unknown): ValidationResult {
   });
 
   if (errors.length) return { ok: false, errors };
-  return { ok: true, value: { id, oyunAdi, karakter, sesModeli, sesAyar, ayarlar, replikler: lines } };
+  return { ok: true, value: { id, oyunAdi, karakter, profiller, ayarlar, replikler: lines } };
+}
+
+/** Kullanicidan gelen profil dizisini dogrular ve normalize eder */
+function normalizeProfiller(raw: unknown[], errors: string[]): VoiceProfile[] {
+  const out: VoiceProfile[] = [];
+  raw.forEach((item, i) => {
+    if (!isObj(item)) {
+      errors.push(`ses profili #${i + 1} bir nesne degil.`);
+      return;
+    }
+    const ad = str(item.ad) ?? "";
+    if (!ad) {
+      errors.push(`ses profili #${i + 1}: karakter adi bos.`);
+      return;
+    }
+    if (ad.length > LIMITS.karakter) errors.push(`ses profili #${i + 1}: karakter adi cok uzun.`);
+
+    const voiceId = str(item.voiceId) ?? "";
+    if (voiceId && !VOICE_RE.test(voiceId)) errors.push(`ses profili "${ad}": ses kimligi gecersiz.`);
+
+    const id = benzersizKimlik(str(item.id) || ad, out.map((p) => p.id));
+    const modelId = str(item.modelId) || VARSAYILAN_MODEL;
+    const t = isObj(item.temel) ? item.temel : {};
+    const duygular = normalizeDuygular(isObj(item.duygular) ? item.duygular : {});
+
+    out.push({
+      id,
+      ad,
+      voiceId,
+      voiceAd: str(item.voiceAd) ?? "",
+      modelId,
+      temel: {
+        similarity_boost: num(t.similarity_boost, VARSAYILAN_TEMEL.similarity_boost, 0, 1),
+        use_speaker_boost: t.use_speaker_boost !== false,
+      },
+      duygular,
+    });
+  });
+  return out;
+}
+
+function normalizeDuygular(raw: Record<string, unknown>): Record<string, Emotion> {
+  const out: Record<string, Emotion> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (!isObj(val)) continue;
+    const anahtar = profilKimligi(key);
+    if (!anahtar) continue;
+    out[anahtar] = {
+      ad: str(val.ad) || key,
+      etiket: (str(val.etiket) ?? "").slice(0, 40),
+      stability: num(val.stability, 0.5, 0, 1),
+      style: num(val.style, 0, 0, 1),
+      speed: num(val.speed, 1, SPEED_MIN, SPEED_MAX),
+    };
+  }
+  // Notr kanali her zaman bulunmali
+  if (!out[VARSAYILAN_DUYGU]) out[VARSAYILAN_DUYGU] = { ...VARSAYILAN_DUYGULAR[VARSAYILAN_DUYGU] };
+  return out;
+}
+
+/**
+ * Eski tek sesli kayitlari profile cevirir (veri kaybi olmadan).
+ * `sesModeli` sesin kimligi, `sesAyar.speakingRate` ise notr kanalinin hizi olur.
+ */
+function eskiKayittanProfil(
+  sesModeli: string | null,
+  sesAyar: Record<string, unknown>,
+  karakter: string
+): VoiceProfile {
+  const p = bosProfil(karakter || "Karakter");
+  p.id = profilKimligi(karakter || "karakter");
+  p.voiceId = sesModeli || "";
+  const hiz = num(sesAyar.speakingRate, 1, SPEED_MIN, SPEED_MAX);
+  p.duygular[VARSAYILAN_DUYGU] = { ...p.duygular[VARSAYILAN_DUYGU], speed: hiz };
+  return p;
 }
 
 /** ClientScenario -> tekrar kaydedilebilir ScenarioInput (server alanlari dusurulur) */
@@ -218,14 +328,50 @@ export function toScenarioInput(s: ClientScenario | Scenario): ScenarioInput {
     id: s.id,
     oyunAdi: s.oyunAdi,
     karakter: s.karakter,
-    sesModeli: s.sesModeli,
-    sesAyar: { ...s.sesAyar },
+    profiller: (s.profiller ?? []).map((p) => ({
+      ...p,
+      temel: { ...p.temel },
+      duygular: JSON.parse(JSON.stringify(p.duygular)) as Record<string, Emotion>,
+    })),
     ayarlar: { ...s.ayarlar },
     replikler: s.replikler.map((l) => ({
       sira: l.sira,
       tetikleyici: l.tetikleyici,
       yanit: l.yanit,
       esneklik: l.esneklik,
+      profil: l.profil,
+      duygu: l.duygu,
     })),
   };
+}
+
+/**
+ * Eski kayitlari yeni yapiya tasir (okuma aninda, veri kaybi olmadan).
+ * - `profiller` bossa tek sesli kayittan bir profil uretir
+ * - Repliklere gecerli `profil` ve `duygu` atar
+ * Yeni yapidaki kayitlarda hicbir sey degistirmez.
+ */
+export function migrateScenario<T extends Scenario>(s: T): T {
+  const profiller: VoiceProfile[] = s.profiller?.length
+    ? s.profiller
+    : [eskiKayittanProfil(s.sesModeli ?? null, (s.sesAyar ?? {}) as Record<string, unknown>, s.karakter)];
+
+  const ilkId = profiller[0].id;
+  const replikler = s.replikler.map((l) => {
+    const profilId = profiller.some((p) => p.id === l.profil) ? l.profil : ilkId;
+    const p = profiller.find((x) => x.id === profilId);
+    const duygu = p && l.duygu && l.duygu in p.duygular ? l.duygu : VARSAYILAN_DUYGU;
+    return { ...l, profil: profilId, duygu };
+  });
+
+  const { sesModeli: _sm, sesAyar: _sa, ...temiz } = s;
+  void _sm;
+  void _sa;
+  return { ...temiz, profiller, replikler } as unknown as T;
+}
+
+/** Bir repligin profilini bulur; bulunamazsa ilk profile duser */
+export function replikProfili(s: { profiller: VoiceProfile[] }, l: { profil?: string }): VoiceProfile | null {
+  if (!s.profiller?.length) return null;
+  return s.profiller.find((p) => p.id === l.profil) ?? s.profiller[0];
 }

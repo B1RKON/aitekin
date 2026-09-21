@@ -221,6 +221,28 @@ export function useAudioPlayer() {
     [getEl, stop, finish]
   );
 
+  /** Uzaktaki bir sesi dogrudan calar (ElevenLabs ornek sesi - kredi harcamaz) */
+  const playUrl = useCallback(
+    (url: string): Promise<void> => {
+      stop();
+      return new Promise<void>((resolve) => {
+        resolveRef.current = resolve;
+        const a = getEl();
+        setIsSpeaking(true);
+        const done = () => {
+          a.onended = null;
+          a.onerror = null;
+          finish();
+        };
+        a.onended = done;
+        a.onerror = done;
+        a.src = url;
+        a.play().catch(done);
+      });
+    },
+    [getEl, stop, finish]
+  );
+
   useEffect(() => {
     const urls = blobUrls.current;
     return () => {
@@ -230,5 +252,5 @@ export function useAudioPlayer() {
     };
   }, []);
 
-  return { unlock, unlocked, prefetchAll, progress, play, playBlob, stop, isSpeaking };
+  return { unlock, unlocked, prefetchAll, progress, play, playBlob, playUrl, stop, isSpeaking };
 }

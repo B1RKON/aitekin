@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { ClientScenario } from "@/lib/tiyatro/schema";
+import { replikProfili } from "@/lib/tiyatro/schema";
 import type { CueResult } from "@/lib/tiyatro/cueEngine";
 import { useCueEngine } from "@/hooks/tiyatro/useCueEngine";
 import { useAudioPlayer } from "@/hooks/tiyatro/useAudioPlayer";
@@ -72,6 +73,8 @@ export default function RehearsalPanel({ scenario }: { scenario: ClientScenario 
   };
 
   const expected = engine.expected >= 0 ? engine.lines[engine.expected] : null;
+  // Cok karakterli oyunlarda sirada konusan karakterin adi
+  const konusan = (expected && replikProfili(scenario, expected)?.ad) || scenario.karakter;
   const top = last?.candidates[0];
 
   return (
@@ -192,7 +195,7 @@ export default function RehearsalPanel({ scenario }: { scenario: ClientScenario 
         <Panel title="Sıra">
           <p className="text-[11px] uppercase tracking-widest text-zinc-500">Beklenen</p>
           <p className="text-neon-green text-sm mt-1">{expected ? `#${expected.sira} ${expected.tetikleyici}` : "— bitti —"}</p>
-          <p className="text-[11px] uppercase tracking-widest text-zinc-500 mt-3">{scenario.karakter} söyleyecek</p>
+          <p className="text-[11px] uppercase tracking-widest text-zinc-500 mt-3">{konusan} söyleyecek</p>
           <p className="text-neon-pink text-sm mt-1">{expected?.yanit ?? "—"}</p>
           <p className="text-xs text-zinc-600 mt-3 tabular-nums">
             {engine.progress.done} / {engine.progress.total}

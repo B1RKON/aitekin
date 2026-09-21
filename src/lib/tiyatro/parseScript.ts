@@ -6,6 +6,7 @@
  * Sadece sahne yonergeleri ( ... ) [ ... ] temizlenir - TTS onlari okumasin diye.
  */
 import type { LineInput } from "./schema";
+import { VARSAYILAN_DUYGU } from "./voiceProfile";
 
 export interface ScriptEntry {
   /** Konusan karakter; null = sahne yonergesi veya basliksiz metin */
@@ -228,6 +229,9 @@ export function buildReplikler(
         tetikleyici: pendingCue ?? "",
         yanit: e.text,
         esneklik: "dusuk",
+        // Profil, senaryo kaydedilirken atanir (tek karakterli ice aktarma)
+        profil: "",
+        duygu: VARSAYILAN_DUYGU,
       });
     }
     lastWasAi = true;

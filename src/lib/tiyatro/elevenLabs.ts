@@ -1,8 +1,9 @@
 /**
- * ElevenLabs Text-to-Speech (server-only). Ucretsiz plan: ayda 10.000 kredi.
- * Model: eleven_multilingual_v2 (1 kredi/karakter, en dogal Turkce) - ELEVENLABS_MODEL_ID ile degistirilebilir.
+ * ElevenLabs Text-to-Speech (server-only).
+ * Model ve ses ayarlari karakter profilinden gelir (src/lib/tiyatro/voiceProfile.ts).
  */
 import { TiyatroConfigError } from "./errors";
+import { dilKoduDestekler, isV3, type ResolvedVoice } from "./voiceProfile";
 
 export const EL_DEFAULT_MODEL = "eleven_multilingual_v2";
 const BASE = "https://api.elevenlabs.io/v1";
@@ -12,6 +13,16 @@ export interface ElVoice {
   name: string;
   category?: string;
   labels?: Record<string, string>;
+  preview_url?: string;
+}
+
+export interface ElModel {
+  id: string;
+  ad: string;
+  aciklama: string;
+  turkce: boolean;
+  /** Duygu etiketleri ([whispers] gibi) yalnizca v3 modellerinde calisir */
+  duyguEtiketi: boolean;
 }
 
 export interface ElQuota {
@@ -45,27 +56,72 @@ async function elError(res: Response, prefix: string): Promise<Error> {
   return new Error(msg);
 }
 
-export async function elSynthesize(p: { text: string; voiceId: string; speakingRate: number }): Promise<Buffer> {
-  const speed = Math.min(1.2, Math.max(0.7, p.speakingRate));
+/**
+ * Cozulmus profil hedefiyle seslendirir.
+ * - `onEk` (duygu etiketi) metnin basina yalnizca v3'te eklenir; cozumleme sirasinda yapilir.
+ * - `speed` v3'te desteklenmez, gonderilmez.
+ * - `language_code` yalnizca Flash/Turbo v2.5'e gonderilir.
+ */
+export async function elSynthesize(p: { text: string; hedef: ResolvedVoice }): Promise<Buffer> {
+  const { voiceId, modelId, ayarlar, onEk } = p.hedef;
+  if (!voiceId) throw new Error("Karakter icin ses secilmemis.");
+
   const voice_settings: Record<string, number | boolean> = {
-    stability: 0.5,
-    similarity_boost: 0.75,
-    style: 0,
-    use_speaker_boost: true,
+    stability: ayarlar.stability,
+    similarity_boost: ayarlar.similarity_boost,
+    style: ayarlar.style,
+    use_speaker_boost: ayarlar.use_speaker_boost,
   };
-  if (Math.abs(speed - 1) > 0.01) voice_settings.speed = speed;
+  if (!isV3(modelId) && Math.abs(ayarlar.speed - 1) > 0.01) voice_settings.speed = ayarlar.speed;
+
+  const govde: Record<string, unknown> = {
+    text: onEk + p.text,
+    model_id: modelId,
+    voice_settings,
+  };
+  if (dilKoduDestekler(modelId)) govde.language_code = "tr";
 
   const res = await fetch(
-    `${BASE}/text-to-speech/${encodeURIComponent(p.voiceId)}?output_format=mp3_44100_128`,
+    `${BASE}/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
     {
       method: "POST",
       headers: { "xi-api-key": apiKey(), "Content-Type": "application/json", Accept: "audio/mpeg" },
-      body: JSON.stringify({ text: p.text, model_id: elModelId(), voice_settings }),
+      body: JSON.stringify(govde),
       signal: AbortSignal.timeout(30000),
     }
   );
   if (!res.ok) throw await elError(res, "ElevenLabs TTS hata");
   return Buffer.from(await res.arrayBuffer());
+}
+
+let modelsCache: { at: number; models: ElModel[] } | null = null;
+
+export async function elListModels(): Promise<ElModel[]> {
+  if (modelsCache && Date.now() - modelsCache.at < 60 * 60 * 1000) return modelsCache.models;
+  const res = await fetch(`${BASE}/models`, {
+    headers: { "xi-api-key": apiKey() },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw await elError(res, "ElevenLabs model listesi hata");
+  const j = (await res.json()) as {
+    model_id?: string;
+    name?: string;
+    description?: string;
+    can_do_text_to_speech?: boolean;
+    languages?: { language_id?: string }[];
+  }[];
+  const models: ElModel[] = (Array.isArray(j) ? j : [])
+    .filter((m) => m.model_id && m.can_do_text_to_speech !== false)
+    .map((m) => ({
+      id: m.model_id as string,
+      ad: m.name ?? (m.model_id as string),
+      aciklama: m.description ?? "",
+      turkce: (m.languages ?? []).some((l) => l.language_id === "tr"),
+      duyguEtiketi: isV3(m.model_id as string),
+    }))
+    .filter((m) => m.turkce);
+  modelsCache = { at: Date.now(), models };
+  return models;
 }
 
 let voicesCache: { at: number; voices: ElVoice[] } | null = null;

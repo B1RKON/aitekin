@@ -2,6 +2,7 @@
  * Tiyatro AI - client fetch sarmalayicilari
  */
 import type { ClientScenario, ScenarioInput, ScenarioSummary } from "./schema";
+import { migrateScenario } from "./schema";
 
 export class ApiError extends Error {
   status: number;
@@ -34,6 +35,17 @@ export interface VoiceInfo {
   id: string;
   label: string;
   gender: string;
+  turkce: boolean;
+  onizlemeUrl?: string;
+}
+
+export interface ModelInfo {
+  id: string;
+  ad: string;
+  aciklama: string;
+  turkce: boolean;
+  /** Duygu etiketleri ([whispers] gibi) yalnizca bu modellerde calisir */
+  duyguEtiketi: boolean;
 }
 
 export interface VoiceQuota {
@@ -46,11 +58,20 @@ export interface VoiceQuota {
 export interface VoiceCatalog {
   provider: "elevenlabs" | "google";
   voices: VoiceInfo[];
+  models: ModelInfo[];
   defaultVoice: string | null;
+  defaultModel: string;
   quota: VoiceQuota | null;
-  modelId: string;
-  supportsPitch: boolean;
   speedRange: [number, number];
+}
+
+/** Kaydedilmemis ayarlarla ses denemesi */
+export interface TtsPreviewInput {
+  metin: string;
+  voiceId: string;
+  modelId: string;
+  duygu: { etiket: string; stability: number; style: number; speed: number };
+  temel: { similarity_boost: number; use_speaker_boost: boolean };
 }
 
 async function parseError(res: Response): Promise<ApiError> {
@@ -96,14 +117,16 @@ export const tiyatroApi = {
   listScenarios: async () =>
     (await request<{ scenarios: ScenarioSummary[] }>("/api/tiyatro/scenarios")).scenarios,
   getScenario: async (id: string) =>
-    (await request<{ scenario: ClientScenario }>(`/api/tiyatro/scenarios/${sid(id)}`)).scenario,
+    migrateScenario((await request<{ scenario: ClientScenario }>(`/api/tiyatro/scenarios/${sid(id)}`)).scenario),
   saveScenario: async (input: ScenarioInput) =>
-    (
-      await request<{ scenario: ClientScenario }>("/api/tiyatro/scenarios", {
-        method: "POST",
-        body: JSON.stringify(input),
-      })
-    ).scenario,
+    migrateScenario(
+      (
+        await request<{ scenario: ClientScenario }>("/api/tiyatro/scenarios", {
+          method: "POST",
+          body: JSON.stringify(input),
+        })
+      ).scenario
+    ),
   deleteScenario: (id: string) =>
     request<{ ok: boolean }>(`/api/tiyatro/scenarios/${sid(id)}`, { method: "DELETE" }),
 
@@ -132,12 +155,12 @@ export const tiyatroApi = {
       })
     ).embedding,
 
-  async ttsPreview(text: string, voice: string, speakingRate: number, pitch: number): Promise<Blob> {
+  async ttsPreview(input: TtsPreviewInput): Promise<Blob> {
     const res = await fetch("/api/tiyatro/tts", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice, speakingRate, pitch }),
+      body: JSON.stringify(input),
     });
     if (!res.ok) throw await parseError(res);
     return res.blob();

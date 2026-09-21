@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { ClientScenario } from "@/lib/tiyatro/schema";
+import { replikProfili } from "@/lib/tiyatro/schema";
 import { COOLDOWN_MS } from "@/lib/tiyatro/cueEngine";
 import { useCueEngine } from "@/hooks/tiyatro/useCueEngine";
 import { useSpeechRecognition } from "@/hooks/tiyatro/useSpeechRecognition";
@@ -310,6 +311,8 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
 
   const running = status !== "idle" && status !== "paused" && status !== "loading";
   const expected = engine.expected >= 0 ? engine.lines[engine.expected] : null;
+  // Cok karakterli oyunlarda sirada konusan karakterin adi
+  const konusan = (expected && replikProfili(scenario, expected)?.ad) || scenario.karakter;
   const nextIdx = engine.expected >= 0 ? engine.lines.findIndex((_, i) => i > engine.expected && !engine.state.done.includes(i)) : -1;
   const next = nextIdx >= 0 ? engine.lines[nextIdx] : null;
   const pct = engine.progress.total ? Math.round((engine.progress.done / engine.progress.total) * 100) : 0;
@@ -354,7 +357,7 @@ export default function StagePanel({ scenario, offline }: { scenario: ClientScen
               </p>
             )}
           </Panel>
-          <Panel title={expected ? `${scenario.karakter} söyleyecek · #${expected.sira}` : scenario.karakter}>
+          <Panel title={expected ? `${konusan} söyleyecek · #${expected.sira}` : konusan}>
             <p className="text-lg md:text-xl text-neon-pink leading-snug">{expected ? expected.yanit : "—"}</p>
             {expected && !expected.audioReady && (
               <p className="text-xs text-neon-yellow mt-3">Bu repliğin sesi üretilmemiş — tarayıcı sesi ile okunur.</p>
