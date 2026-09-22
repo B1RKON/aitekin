@@ -182,6 +182,8 @@ export default function VoiceProfilePanel({ profiller, onChange, catalog, catalo
     return v.label.toLocaleLowerCase("tr-TR").includes(arama.toLocaleLowerCase("tr-TR"));
   });
 
+  const gizlenen = (catalog?.voices.length ?? 0) - sesler.length;
+
   const kota =
     catalog?.quota && catalog.quota.limit > 0
       ? `${catalog.quota.used.toLocaleString("tr-TR")} / ${catalog.quota.limit.toLocaleString("tr-TR")}`
@@ -263,7 +265,13 @@ export default function VoiceProfilePanel({ profiller, onChange, catalog, catalo
           {/* Ses secimi */}
           <div className="border border-zinc-800 rounded-lg p-3 bg-black/30">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Ses</span>
+              <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">
+                Ses
+                <span className="ml-2 normal-case tracking-normal text-zinc-600">
+                  {sesler.length} görünüyor
+                  {gizlenen > 0 && `, ${gizlenen} gizli`}
+                </span>
+              </span>
               <div className="flex items-center gap-3">
                 {catalog?.provider === "elevenlabs" && (
                   <label className="text-[11px] text-zinc-400 flex items-center gap-1.5 cursor-pointer">
@@ -286,7 +294,11 @@ export default function VoiceProfilePanel({ profiller, onChange, catalog, catalo
             </div>
 
             <div className="max-h-44 overflow-auto space-y-1 pr-1">
-              {sesler.length === 0 && <p className="text-xs text-zinc-600">Ses bulunamadı.</p>}
+              {sesler.length === 0 && (
+                <p className="text-xs text-neon-yellow">
+                  Bu filtreyle ses bulunamadı. “yalnızca Türkçe” kutusunu kaldırıp deneyin.
+                </p>
+              )}
               {sesler.map((v) => (
                 <div
                   key={v.id}

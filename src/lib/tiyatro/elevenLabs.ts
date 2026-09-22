@@ -12,6 +12,7 @@ export interface ElVoice {
   voice_id: string;
   name: string;
   category?: string;
+  description?: string;
   labels?: Record<string, string>;
   preview_url?: string;
 }
@@ -170,9 +171,17 @@ export async function elQuota(): Promise<ElQuota | null> {
   }
 }
 
+const CINSIYET: Record<string, string> = { male: "erkek", female: "kadın", neutral: "nötr" };
+const YAS: Record<string, string> = { young: "genç", middle_aged: "orta yaş", old: "yaşlı" };
+const KATEGORI: Record<string, string> = { professional: "profesyonel", cloned: "klon", generated: "üretilmiş" };
+
+/** Ekranda gorunen ses adi. Cinsiyet ve yas Turkce yazilir: "Yasemin (kadın, orta yaş)" */
 export function elLabel(v: ElVoice): string {
   const l = v.labels ?? {};
-  const bits = [l.gender, l.accent, l.age].filter(Boolean).join(", ");
-  const cat = v.category && v.category !== "premade" ? ` [${v.category}]` : "";
-  return bits ? `${v.name} (${bits})${cat}` : `${v.name}${cat}`;
+  const cinsiyet = CINSIYET[(l.gender ?? "").toLowerCase()] ?? l.gender ?? "";
+  const yas = YAS[(l.age ?? "").toLowerCase()] ?? l.age ?? "";
+  const bits = [cinsiyet, yas, l.accent].filter(Boolean).join(", ");
+  const kat = v.category && v.category !== "premade" ? ` · ${KATEGORI[v.category] ?? v.category}` : "";
+  const ad = v.name.trim();
+  return bits ? `${ad} (${bits})${kat}` : `${ad}${kat}`;
 }

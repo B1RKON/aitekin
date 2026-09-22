@@ -14,6 +14,7 @@ import {
   elQuota,
   elSynthesize,
   type ElModel,
+  type ElVoice,
   type ElQuota,
 } from "./elevenLabs";
 import {
@@ -118,12 +119,16 @@ function genderTr(g: string): string {
   return "nötr";
 }
 
-/** ElevenLabs etiketlerinden sesin Turkce'ye uygunlugunu tahmin eder */
-function turkceMi(v: { labels?: Record<string, string>; name: string }): boolean {
+/**
+ * Sesin Turkce'ye uygunlugunu tahmin eder.
+ * Once `language` etiketine bakar; yoksa ad/aciklama/aksanda Turkce ipucu arar.
+ * Not: "tr" alt dizesi aranmaz - "australian" gibi kelimeler yanlis eslesiyordu.
+ */
+function turkceMi(v: ElVoice): boolean {
   const l = v.labels ?? {};
-  const dil = `${l.language ?? ""} ${l.accent ?? ""}`.toLowerCase();
-  if (dil.includes("tr") || dil.includes("turk")) return true;
-  return /turk|türk/i.test(v.name);
+  if ((l.language ?? "").trim().toLowerCase() === "tr") return true;
+  const metin = [v.name, v.description ?? "", l.accent ?? "", l.description ?? ""].join(" ");
+  return /türk|turk|istanbul|anadolu/i.test(metin);
 }
 
 export async function voiceCatalog(): Promise<VoiceCatalog> {
