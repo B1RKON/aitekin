@@ -107,7 +107,11 @@ export default function ScenarioList({ onOpen, onEdit, onNew }: Props) {
         force,
         onProgress: (r) => setGen((g) => ({ ...g, [id]: r })),
       });
-      if (res.failed.length) setError(`Bazı replikler üretilemedi: #${res.failed.join(", #")}`);
+      if (res.failed.length) {
+        setError(
+          `Bazı replikler üretilemedi: #${res.failed.join(", #")}${res.hata ? ` — ${res.hata}` : ""}`
+        );
+      }
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Ses üretilemedi.");

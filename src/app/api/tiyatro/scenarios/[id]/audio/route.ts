@@ -61,6 +61,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const started = Date.now();
     const failed: number[] = [];
     let generated = 0;
+    // Ilk hatanin mesaji kullaniciya gosterilir (ornegin "ses bu hesapta yok")
+    let hata: string | null = null;
 
     for (let i = 0; i < batch.length; i += CONCURRENCY) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
@@ -87,8 +89,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             }
             lines[idx] = { ...l, audioPath: path, audioHash: hash };
             generated++;
-          } catch {
+          } catch (e) {
             failed.push(l.sira);
+            if (!hata) hata = e instanceof Error ? e.message : "Bilinmeyen hata";
           }
         })
       );
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       generated,
       remaining: lines.length - ready,
       failed: failed.sort((a, b) => a - b),
+      hata,
     });
   } catch (err) {
     return handleError(err, "Ses uretilemedi.");

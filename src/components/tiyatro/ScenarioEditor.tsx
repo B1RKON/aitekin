@@ -166,7 +166,11 @@ export default function ScenarioEditor({ initial, draft, onSaved, onCancel }: Pr
       cache.saveScenario(s);
       setSaved(s);
       onSaved(s);
-      setMsg(res.failed.length ? `Üretilemeyen replikler: #${res.failed.join(", #")}` : `Sesler hazır (${res.ready}/${res.total}).`);
+      setMsg(
+        res.failed.length
+          ? `Üretilemeyen replikler: #${res.failed.join(", #")}${res.hata ? ` — ${res.hata}` : ""}`
+          : `Sesler hazır (${res.ready}/${res.total}).`
+      );
     } catch (e) {
       setMsg(e instanceof ApiError ? e.message : "Ses üretilemedi.");
     } finally {

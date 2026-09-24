@@ -29,6 +29,8 @@ export interface AudioGenResult {
   generated: number;
   remaining: number;
   failed: number[];
+  /** Ilk basarisiz replikte olusan hatanin aciklamasi */
+  hata?: string | null;
 }
 
 export interface VoiceInfo {

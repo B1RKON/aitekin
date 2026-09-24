@@ -85,10 +85,17 @@ async function hedefiCoz(profil: VoiceProfile, duygu: string): Promise<ResolvedV
     hedef.voiceId = isGoogleVoice(hedef.voiceId) ? hedef.voiceId : GOOGLE_DEFAULT;
     return hedef;
   }
+  const voices = await elListVoices();
+  if (!voices.length) throw new Error("ElevenLabs hesabinda kullanilabilir ses bulunamadi.");
+
+  // Ses secilmemisse ilkine duser; secilmis ama bu hesapta yoksa acik hata verir
+  // (ornegin ELEVENLABS_API_KEY baska bir hesabin anahtariyla degistirildiginde)
   if (!hedef.voiceId || isGoogleVoice(hedef.voiceId)) {
-    const voices = await elListVoices();
-    if (!voices.length) throw new Error("ElevenLabs hesabinda kullanilabilir ses bulunamadi.");
     hedef.voiceId = voices[0].voice_id;
+  } else if (!voices.some((v) => v.voice_id === hedef.voiceId)) {
+    throw new Error(
+      "Bu karakterin sesi ElevenLabs hesabinda bulunamadi. Karakter sesleri panelinden yeni bir ses secip kaydedin."
+    );
   }
   return hedef;
 }
