@@ -156,17 +156,22 @@ export async function voiceCatalog(): Promise<VoiceCatalog> {
     elListModels().catch(() => [] as ElModel[]),
     elQuota(),
   ]);
-  return {
-    provider,
-    voices: voices.map((v) => ({
+  // Turkce etiketli sesler en uste; boylece filtre kapaliyken de once onlar gorunur
+  const liste: VoiceInfo[] = voices
+    .map((v) => ({
       id: v.voice_id,
       label: elLabel(v),
       gender: v.labels?.gender ?? "",
       turkce: turkceMi(v),
       onizlemeUrl: v.preview_url,
-    })),
+    }))
+    .sort((a, b) => Number(b.turkce) - Number(a.turkce));
+
+  return {
+    provider,
+    voices: liste,
     models,
-    defaultVoice: voices.find((v) => turkceMi(v))?.voice_id ?? voices[0]?.voice_id ?? null,
+    defaultVoice: liste[0]?.id ?? null,
     defaultModel: elModelId(),
     quota,
     speedRange: [SPEED_MIN, SPEED_MAX],

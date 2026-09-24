@@ -176,13 +176,17 @@ export default function VoiceProfilePanel({ profiller, onChange, catalog, catalo
     void player.playUrl(url);
   };
 
-  const sesler = (catalog?.voices ?? []).filter((v) => {
-    if (yalnizTurkce && catalog?.provider === "elevenlabs" && !v.turkce) return false;
-    if (!arama.trim()) return true;
-    return v.label.toLocaleLowerCase("tr-TR").includes(arama.toLocaleLowerCase("tr-TR"));
-  });
+  const tumSesler = catalog?.voices ?? [];
+  const aramaGec = (v: { label: string }) =>
+    !arama.trim() || v.label.toLocaleLowerCase("tr-TR").includes(arama.toLocaleLowerCase("tr-TR"));
 
-  const gizlenen = (catalog?.voices.length ?? 0) - sesler.length;
+  const turkceVar = tumSesler.some((v) => v.turkce);
+  // Turkce filtresi hicbir ses birakmiyorsa uygulanmaz: bos liste kullaniciyi cikmaza sokuyor
+  const turkceUygula = yalnizTurkce && catalog?.provider === "elevenlabs" && turkceVar;
+  const sesler = tumSesler.filter((v) => (turkceUygula ? v.turkce : true) && aramaGec(v));
+
+  const gizlenen = tumSesler.length - sesler.length;
+  const turkceYok = yalnizTurkce && catalog?.provider === "elevenlabs" && !turkceVar && tumSesler.length > 0;
 
   const kota =
     catalog?.quota && catalog.quota.limit > 0
@@ -293,10 +297,19 @@ export default function VoiceProfilePanel({ profiller, onChange, catalog, catalo
               </div>
             </div>
 
+            {turkceYok && (
+              <p className="text-[11px] text-neon-yellow border border-neon-yellow/30 rounded p-2 mb-2 leading-relaxed">
+                Bu ElevenLabs hesabında Türkçe etiketli ses yok, bu yüzden tüm sesler listeleniyor.
+                Çok dilli modeller ({catalog?.models.map((m) => m.ad).slice(0, 2).join(", ") || "v3, Multilingual v2"})
+                bu seslerle de Türkçe konuşur, ama hafif aksanlı olur. Doğal Türkçe için hesaba
+                ElevenLabs ses kütüphanesinden Türkçe bir ses eklenmeli.
+              </p>
+            )}
+
             <div className="max-h-44 overflow-auto space-y-1 pr-1">
               {sesler.length === 0 && (
                 <p className="text-xs text-neon-yellow">
-                  Bu filtreyle ses bulunamadı. “yalnızca Türkçe” kutusunu kaldırıp deneyin.
+                  {arama.trim() ? "Aramaya uyan ses yok." : "Bu hesapta hiç ses bulunamadı."}
                 </p>
               )}
               {sesler.map((v) => (
